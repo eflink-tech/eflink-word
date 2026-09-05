@@ -1,0 +1,87 @@
+{
+  "name": "@eflink-tech/word",
+  "description": "开箱即用的在线 Word 文档编辑器 React 组件（基于 canvas-editor），可独立运行，也可作为组件嵌入任意 React 应用",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "scripts": {
+    "dev": "tsc -p tsconfig.lib.json && vite build --watch",
+    "build": "vite build --emptyOutDir && tsc -p tsconfig.lib.json",
+    "lint": "oxlint src",
+    "typecheck": "tsc -b && tsc -p tsconfig.lib.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "dependencies": {
+    "@hufe921/canvas-editor": "^1.0.2",
+    "dexie": "^4.0.0",
+    "file-saver": "^2.0.5",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^1.37.0",
+    "nanoid": "^5.0.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1",
+    "oxlint": "^1.79.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eflink-tech/eflink-word.git",
+    "directory": "packages/word"
+  },
+  "bugs": {
+    "url": "https://github.com/eflink-tech/eflink-word/issues"
+  },
+  "homepage": "https://github.com/eflink-tech/eflink-word#readme",
+  "keywords": [
+    "word",
+    "docx",
+    "editor",
+    "rich-text",
+    "react-component",
+    "canvas-editor",
+    "document"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

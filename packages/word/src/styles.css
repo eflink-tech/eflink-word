@@ -1,0 +1,11 @@
+/* 组件库样式入口：随包发布为 dist/styles.css，宿主手动引入一次即可。
+   页面级全局样式（html/body 字体、高度等）不属于组件库，由宿主自行提供。 */
+@import 'tailwindcss';
+
+/* 打印时隐藏编辑器界面元素，只保留文档画布 */
+@media print {
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+}
