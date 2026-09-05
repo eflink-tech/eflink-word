@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { SearchPanel } from '../SearchPanel';
 import { mockCommand } from '../../../test/__mocks__/canvasEditorMock';
 
@@ -74,16 +75,56 @@ describe('SearchPanel', () => {
     expect(mockCommand.executeSearchNavigateNext).toHaveBeenCalled();
   });
 
-  it('全部替换触发 executeReplace 并最终停止', async () => {
+  it('全部替换一次性调用 executeReplace（不带 index）并同步计数', async () => {
     mockCommand.getSearchNavigateInfo.mockReturnValue({ index: 0, count: 1 });
     render(<SearchPanel editor={mockEditor} onClose={onClose} />);
     fireEvent.change(screen.getByPlaceholderText('查找内容'), { target: { value: '关键词' } });
     fireEvent.change(screen.getByPlaceholderText('替换为'), { target: { value: '新词' } });
     fireEvent.click(screen.getByText('全部替换'));
-    // 等待微任务执行
+    // 等待 safeSetTimeout 回调执行
     await new Promise((r) => setTimeout(r, 50));
-    expect(mockCommand.executeReplace).toHaveBeenCalled();
+    expect(mockCommand.executeReplace).toHaveBeenCalledTimes(1);
+    expect(mockCommand.executeReplace).toHaveBeenCalledWith('新词');
     expect(mockCommand.getSearchNavigateInfo).toHaveBeenCalled();
+  });
+
+  it('单处替换按当前匹配下标传 index（1-based 转 0-based）', async () => {
+    mockCommand.getSearchNavigateInfo.mockReturnValue({ index: 2, count: 3 });
+    render(<SearchPanel editor={mockEditor} onClose={onClose} />);
+    fireEvent.change(screen.getByPlaceholderText('查找内容'), { target: { value: '关键词' } });
+    fireEvent.change(screen.getByPlaceholderText('替换为'), { target: { value: '新词' } });
+    fireEvent.click(screen.getByText('替换'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(mockCommand.executeReplace).toHaveBeenCalledWith('新词', { index: 1 });
+  });
+
+  it('未导航定位时（index=0）单处替换取首处匹配', async () => {
+    mockCommand.getSearchNavigateInfo.mockReturnValue({ index: 0, count: 3 });
+    render(<SearchPanel editor={mockEditor} onClose={onClose} />);
+    fireEvent.change(screen.getByPlaceholderText('查找内容'), { target: { value: '关键词' } });
+    fireEvent.change(screen.getByPlaceholderText('替换为'), { target: { value: '新词' } });
+    fireEvent.click(screen.getByText('替换'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(mockCommand.executeReplace).toHaveBeenCalledWith('新词', { index: 0 });
+  });
+
+  it('StrictMode 双挂载后计数仍能更新（mountedRef 回归测试）', async () => {
+    mockCommand.getSearchNavigateInfo.mockReturnValue({ index: 1, count: 2 });
+    render(
+      <StrictMode>
+        <SearchPanel editor={mockEditor} onClose={onClose} />
+      </StrictMode>,
+    );
+    fireEvent.change(screen.getByPlaceholderText('查找内容'), { target: { value: '关键词' } });
+    // StrictMode 挂载→清理→重挂载后 mountedRef 必须仍为 true，否则 syncResults 被丢弃
+    await waitFor(() => expect(screen.getByText('1/2')).toBeTruthy());
+  });
+
+  it('搜索无结果时显示「无结果」', async () => {
+    mockCommand.getSearchNavigateInfo.mockReturnValue(null);
+    render(<SearchPanel editor={mockEditor} onClose={onClose} />);
+    fireEvent.change(screen.getByPlaceholderText('查找内容'), { target: { value: '不存在' } });
+    await waitFor(() => expect(screen.getByText('无结果')).toBeTruthy());
   });
 
   it('editor 为 null 时不崩溃', () => {

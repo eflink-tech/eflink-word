@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronUp, ChevronDown, X } from 'lucide-react';
 import type Editor from '@hufe921/canvas-editor';
 
@@ -7,19 +7,17 @@ interface SearchPanelProps {
   onClose: () => void;
 }
 
-/** 全部替换最大迭代次数：防止无限循环的安全阈值 */
-const MAX_REPLACE_ITERATIONS = 1000;
-
-/** 查找替换面板（对应旧系统 search__collapse，基于 canvas-editor 搜索 API） */
+/** 查找替换面板（基于 canvas-editor 搜索 API） */
 export function SearchPanel({ editor, onClose }: SearchPanelProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [replaceTerm, setReplaceTerm] = useState('');
   const [resultText, setResultText] = useState('');
-  const [isReplacing, setIsReplacing] = useState(false);
 
+  // StrictMode 下 effects 会「挂载 → 清理 → 重新挂载」且 ref 值保留，
+  // 必须在 effect 体里重新置 true，否则清理置 false 后 safeSetTimeout 永远丢弃回调
   const mountedRef = useRef(true);
-  const cancelReplaceRef = useRef(false);
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };
@@ -32,14 +30,17 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
     }, ms);
   };
 
-  // 同步搜索结果数量
-  const syncResults = () => {
+  // 同步搜索结果数量；term 为触发本次同步的查找词（避免读到过期 state）
+  // getSearchNavigateInfo().index 为 1-based 当前匹配序号，0 表示尚未导航定位
+  const syncResults = (term: string) => {
     if (!editor) return;
     const info = editor.command.getSearchNavigateInfo();
     if (!info || info.count === 0) {
-      setResultText(searchTerm ? '无结果' : '');
+      setResultText(term ? '无结果' : '');
+    } else if (info.index > 0) {
+      setResultText(`${info.index}/${info.count}`);
     } else {
-      setResultText(`${info.index + 1}/${info.count}`);
+      setResultText(`${info.count} 处`);
     }
   };
 
@@ -52,56 +53,35 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
   const handleSearch = (value: string) => {
     setSearchTerm(value);
     if (!editor) return;
-    if (value) {
-      editor.command.executeSearch(value);
-    } else {
-      editor.command.executeSearch(null);
-    }
+    editor.command.executeSearch(value || null);
     // 延迟同步以等待搜索结果更新
-    safeSetTimeout(syncResults, 0);
+    safeSetTimeout(() => syncResults(value), 0);
   };
 
+  // 替换当前匹配：canvas-editor 不传 index 会替换全部，须显式传当前匹配下标
+  // （getSearchNavigateInfo().index 为 1-based，replace 的 option.index 为 0-based；0 表示未导航定位，取首处）
   const handleReplace = () => {
-    if (!editor) return;
-    editor.command.executeReplace(replaceTerm);
-    safeSetTimeout(syncResults, 0);
+    if (!editor || !searchTerm) return;
+    const info = editor.command.getSearchNavigateInfo();
+    editor.command.executeReplace(replaceTerm, { index: info && info.index > 0 ? info.index - 1 : 0 });
+    safeSetTimeout(() => syncResults(searchTerm), 0);
   };
 
+  // 全部替换：executeReplace 不传 index 即一次替换全部匹配（同步完成）
   const handleReplaceAll = () => {
-    if (!editor || !searchTerm || isReplacing) return;
-    setIsReplacing(true);
-    cancelReplaceRef.current = false;
-    let iterations = 0;
-    const doReplace = () => {
-      if (!mountedRef.current || cancelReplaceRef.current) {
-        setIsReplacing(false);
-        return;
-      }
-      const info = editor.command.getSearchNavigateInfo();
-      if (!info || info.count === 0 || iterations >= MAX_REPLACE_ITERATIONS) {
-        syncResults();
-        setIsReplacing(false);
-        return;
-      }
-      editor.command.executeReplace(replaceTerm);
-      iterations++;
-      safeSetTimeout(doReplace, 0);
-    };
-    doReplace();
+    if (!editor || !searchTerm) return;
+    editor.command.executeReplace(replaceTerm);
+    safeSetTimeout(() => syncResults(searchTerm), 0);
   };
-
-  const handleCancelReplace = useCallback(() => {
-    cancelReplaceRef.current = true;
-  }, []);
 
   const handleNavigateNext = () => {
     editor?.command.executeSearchNavigateNext();
-    safeSetTimeout(syncResults, 0);
+    safeSetTimeout(() => syncResults(searchTerm), 0);
   };
 
   const handleNavigatePrev = () => {
     editor?.command.executeSearchNavigatePre();
-    safeSetTimeout(syncResults, 0);
+    safeSetTimeout(() => syncResults(searchTerm), 0);
   };
 
   const inputClass =
@@ -112,11 +92,7 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
       className="no-print absolute right-4 top-14 z-[200] w-[280px] rounded-md border border-slate-200 bg-white p-3 shadow-lg"
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
-          if (isReplacing) {
-            handleCancelReplace();
-          } else {
-            handleClose();
-          }
+          handleClose();
         }
       }}
     >
@@ -189,24 +165,14 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
         >
           替换
         </button>
-        {isReplacing ? (
-          <button
-            type="button"
-            onClick={handleCancelReplace}
-            className="rounded bg-red-500 px-3 py-1 text-xs text-white hover:bg-red-600"
-          >
-            取消
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleReplaceAll}
-            disabled={!searchTerm}
-            className="rounded bg-blue-500 px-3 py-1 text-xs text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            全部替换
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleReplaceAll}
+          disabled={!searchTerm}
+          className="rounded bg-blue-500 px-3 py-1 text-xs text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          全部替换
+        </button>
       </div>
     </div>
   );
