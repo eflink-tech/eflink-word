@@ -5,3 +5,8 @@ dist
 .vite
 tsconfig.tsbuildinfo
 /*.png
+
+# 环境变量文件（可能含密钥，不入库）
+.env
+.env.*
+!.env.example
