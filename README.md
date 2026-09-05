@@ -4,6 +4,12 @@
 
 A Word-like document editor for the web. Run it standalone, or embed `<WordEditor />` into your React app.
 
+## 截图预览
+
+| 文档编辑 | 插入菜单 | 查找替换 |
+| --- | --- | --- |
+| ![文档编辑](docs/screenshots/document.png) | ![插入菜单](docs/screenshots/insert-menu.png) | ![查找替换](docs/screenshots/search-replace.png) |
+
 ## 功能特性
 
 - 排版引擎：canvas-editor（Apache-2.0，所见即所得分页排版）
