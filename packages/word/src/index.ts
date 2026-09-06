@@ -13,6 +13,10 @@ export { getDefaultStorage, setDefaultStorage } from './storage/registry';
 // 宿主外观：顶栏返回按钮链接
 export { setEditorBackHref } from './core/chrome';
 
+// 分享桥接：宿主注入分享实现（编辑器分享按钮调用）
+export { setWordShareHandler } from './core/share/shareBridge';
+export type { WordShareHandler, WordShareResult } from './core/share/shareBridge';
+
 // headless：.efword 文档备份导入导出、PDF 导出（编辑器实例可经 useEditorStore 获取）
 export {
   exportEfword,

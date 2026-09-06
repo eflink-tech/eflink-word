@@ -1,9 +1,11 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
+import { Share2 } from 'lucide-react';
 import { useDocumentStore } from '../store/documentStore';
 import { useEditorStore } from '../store/editorStore';
 import { useUIStore } from '../store/uiStore';
 import { Toolbar } from './toolbar/Toolbar';
 import { BrandHeader } from './toolbar/BrandHeader';
+import { ShareDialog } from './toolbar/ShareDialog';
 import { SearchPanel } from './toolbar/SearchPanel';
 import { Editor } from './editor/Editor';
 import { CatalogPanel } from '../components/sidebar/CatalogPanel';
@@ -11,6 +13,7 @@ import { StatusBar } from './statusbar/StatusBar';
 import { EditorSettingsModal } from './statusbar/EditorSettingsModal';
 import { useHotkeys } from '../hooks/useHotkeys';
 import { setDefaultStorage } from '../storage/registry';
+import { getWordShareHandler } from '../core/share/shareBridge';
 import type { WordDocument } from '../types/document';
 import type { StorageAdapter } from '../storage/types';
 
@@ -71,6 +74,21 @@ export function WordEditor({
   const innerRef = useRef<HTMLDivElement>(null);
   // 滚动容器（print-root）：目录滚动高亮依赖它
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 分享弹窗（doc 为点击"分享"时刻的文档快照，弹窗期间编辑不影响本次分享内容）
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareDoc, setShareDoc] = useState<WordDocument | null>(null);
+  const closeShare = useRef(() => setShareOpen(false)).current;
+  // 分享前先落库最新内容，并以编辑器实时内容为准覆盖文档快照
+  const openShare = useCallback(async () => {
+    const editorState = useEditorStore.getState();
+    await editorState.save();
+    const doc = useDocumentStore.getState().currentDocument;
+    if (!doc) return;
+    const value = editorState.editor?.command.getValue();
+    setShareDoc(value?.data ? { ...doc, content: value.data } : doc);
+    setShareOpen(true);
+  }, []);
 
   // 页面宽度：目录在窄屏（<1200px）下折叠为悬浮标签/浮层
   const [windowWidth, setWindowWidth] = useState(0);
@@ -178,11 +196,23 @@ export function WordEditor({
 
   return (
     <div className="h-full min-w-[960px] flex flex-col bg-[#f5f6f7]">
-      {/* 顶部单行：左侧品牌+文档标题，中间居中工具栏，右侧查找/打印 */}
+      {/* 顶部单行：左侧品牌+文档标题，中间居中工具栏，右侧分享入口 */}
       {hasTopRow && (
         <div className="no-print relative z-[101] flex h-10 shrink-0 items-center border-b border-black/[0.06] bg-white px-3">
           {branding ? <BrandHeader logo={branding.logo} name={branding.name} /> : null}
           {showToolbar && <Toolbar editor={editor} />}
+          {/* 分享入口仅在宿主注入分享实现后出现（纯组件独立运行时不显示） */}
+          {getWordShareHandler() !== null && (
+            <button
+              type="button"
+              onClick={() => void openShare()}
+              title="生成分享链接"
+              className="ml-1 flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
+            >
+              <Share2 size={14} />
+              分享
+            </button>
+          )}
         </div>
       )}
 
@@ -248,6 +278,8 @@ export function WordEditor({
       {settingsOpen && <EditorSettingsModal />}
 
       {showStatusBar && <StatusBar editor={editor} />}
+
+      <ShareDialog open={shareOpen} doc={shareDoc} onClose={closeShare} />
     </div>
   );
 }
