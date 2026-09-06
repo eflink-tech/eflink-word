@@ -10,6 +10,8 @@ export type { StorageAdapter } from './storage/types';
 export { indexedDbStorage } from './storage/indexedDb';
 export { memoryStorage } from './storage/memory';
 export { getDefaultStorage, setDefaultStorage } from './storage/registry';
+// 宿主外观：顶栏返回按钮链接
+export { setEditorBackHref } from './core/chrome';
 
 // headless：.efword 文档备份导入导出、PDF 导出（编辑器实例可经 useEditorStore 获取）
 export {
