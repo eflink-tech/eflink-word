@@ -119,6 +119,8 @@ interface UIState {
   headerConfig: HeaderFooterConfig;
   footerConfig: HeaderFooterConfig;
   pageNumberConfig: PageNumberConfig;
+  /** 右侧 AI 助手面板开关 */
+  aiPanelOpen: boolean;
 
   toggleComment: () => void;
   setViewMode: (mode: 'page' | 'continuous') => void;
@@ -138,6 +140,7 @@ interface UIState {
   setHeaderConfig: (config: Partial<HeaderFooterConfig>) => void;
   setFooterConfig: (config: Partial<HeaderFooterConfig>) => void;
   setPageNumberConfig: (config: Partial<PageNumberConfig>) => void;
+  toggleAIPanel: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -156,6 +159,7 @@ export const useUIStore = create<UIState>((set) => ({
   headerConfig: { ...DEFAULT_HEADER_CONFIG },
   footerConfig: { ...DEFAULT_FOOTER_CONFIG },
   pageNumberConfig: { ...DEFAULT_PAGE_NUMBER_CONFIG },
+  aiPanelOpen: false,
 
   toggleComment: () => set((state) => ({ commentPanelOpen: !state.commentPanelOpen })),
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -191,4 +195,5 @@ export const useUIStore = create<UIState>((set) => ({
     set((state) => ({ footerConfig: { ...state.footerConfig, ...config } })),
   setPageNumberConfig: (config) =>
     set((state) => ({ pageNumberConfig: { ...state.pageNumberConfig, ...config } })),
+  toggleAIPanel: () => set((state) => ({ aiPanelOpen: !state.aiPanelOpen })),
 }));

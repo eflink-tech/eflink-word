@@ -8,6 +8,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type Editor from '@hufe921/canvas-editor';
 import type { RowFlex } from '@hufe921/canvas-editor';
 import { ListType, ListStyle } from '@hufe921/canvas-editor';
+import { Sparkles } from 'lucide-react';
 import { computeOverflowBuckets, type OverflowBucket } from './toolbarOverflow';
 import { FontFamilySelect } from './FontFamilySelect';
 import { FontSizeSelect } from './FontSizeSelect';
@@ -20,6 +21,7 @@ import { ColorPicker } from './ColorPicker';
 import { WordIconButton, ToolbarDivider } from './ToolButton';
 import { useFormatPainter } from '../../hooks/useFormatPainter';
 import { useEditorStore } from '../../store/editorStore';
+import { useUIStore } from '../../store/uiStore';
 import { ToolbarMenu } from './ToolbarMenu';
 import {
   WordUndoIcon,
@@ -137,6 +139,7 @@ function OverflowMoreButton({
 
 export function Toolbar({ editor }: ToolbarProps) {
   const { rangeStyle } = useEditorStore();
+  const aiPanelOpen = useUIStore((s) => s.aiPanelOpen);
 
   const {
     mode: painterMode,
@@ -565,6 +568,20 @@ export function Toolbar({ editor }: ToolbarProps) {
         ),
       },
       { key: 'highlight-block', collapsible: true, node: <Placeholder icon={WordHighlightBlockIcon} label="高亮块" /> },
+    ],
+    // AI 助手（不折叠）
+    [
+      {
+        key: 'ai-assistant',
+        node: (
+          <WordIconButton
+            icon={Sparkles}
+            label="AI 助手"
+            onClick={() => useUIStore.getState().toggleAIPanel()}
+            active={aiPanelOpen}
+          />
+        ),
+      },
     ],
   ];
 

@@ -22,6 +22,9 @@ vi.mock('@hufe921/canvas-editor', () => ({
   ListType: { UL: 'ul', OL: 'ol' },
   ListStyle: { DISC: 'disc', DECIMAL: 'decimal', CHECKBOX: 'checkbox' },
   TextDecorationStyle: { SOLID: 'solid', DOUBLE: 'double', DASHED: 'dashed', DOTTED: 'dotted', WAVY: 'wavy' },
+  // uiStore 顶层用到（Toolbar 订阅 AI 面板开关时引入）
+  RowFlex: { LEFT: 'left', CENTER: 'center', RIGHT: 'right', JUSTIFY: 'justify' },
+  NumberType: { ARABIC: 'arabic' },
 }));
 
 // mock 所有子组件（Task 2.2-2.4 迁移），避免引入 TipTap 依赖

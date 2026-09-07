@@ -27,6 +27,7 @@ import {
   Ruler,
   Save,
   Settings2,
+  Sparkles,
   SplitSquareHorizontal,
   Table,
   ZoomIn,
@@ -118,6 +119,7 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
     watermark,
     setWatermark,
     setSettingsOpen,
+    aiPanelOpen,
   } = useUIStore();
   const currentDocument = useDocumentStore((s) => s.currentDocument);
 
@@ -442,6 +444,15 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
           { key: 'zoom-in', label: '放大', icon: ZoomIn, shortcut: 'Ctrl =', action: zoomIn },
           { key: 'zoom-out', label: '缩小', icon: ZoomOut, shortcut: 'Ctrl -', action: zoomOut },
           { key: 'zoom-reset', label: '重置缩放', icon: RotateCcw, shortcut: 'Ctrl 0', action: zoomReset },
+        ],
+        [
+          {
+            key: 'ai-assistant',
+            label: '显示 AI 助手',
+            icon: Sparkles,
+            checked: aiPanelOpen,
+            action: () => useUIStore.getState().toggleAIPanel(),
+          },
         ],
       ],
     },

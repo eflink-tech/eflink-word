@@ -9,6 +9,7 @@ import { ShareDialog } from './toolbar/ShareDialog';
 import { SearchPanel } from './toolbar/SearchPanel';
 import { Editor } from './editor/Editor';
 import { CatalogPanel } from '../components/sidebar/CatalogPanel';
+import { AIChatPanel } from './ai/AIChatPanel';
 import { StatusBar } from './statusbar/StatusBar';
 import { EditorSettingsModal } from './statusbar/EditorSettingsModal';
 import { useHotkeys } from '../hooks/useHotkeys';
@@ -68,6 +69,7 @@ export function WordEditor({
     setSearchPanelOpen,
     catalogOpen,
     settingsOpen,
+    aiPanelOpen,
   } = useUIStore();
 
   const stackRef = useRef<HTMLDivElement>(null);
@@ -216,29 +218,30 @@ export function WordEditor({
         </div>
       )}
 
-      {/* 主区域：编辑区铺满并相对整页居中；目录浮层叠在左侧，不挤占居中基准 */}
-      <div className="relative flex-1 overflow-hidden">
-        <div ref={scrollRef} className="print-root absolute inset-0 overflow-y-auto">
-          <div ref={innerRef} className="relative flex min-h-full flex-col items-center pt-[20px] pb-[40px]">
-            <div
-              ref={stackRef}
-              className={`relative z-[1] flex flex-col items-center${viewMode === 'page' ? ' page-stack--paged' : ''}`}
-              style={{
-                width: paperWidth,
-                minHeight: paperHeight,
-                marginLeft: pageClearShift || undefined,
-              }}
-            >
-              <Editor
-                className="relative z-[1]"
+      {/* 主区域：编辑区铺满并相对整页居中；目录浮层叠在左侧不挤占居中基准；AI 面板独占右侧一列 */}
+      <div className="relative flex flex-1 overflow-hidden">
+        <div className="relative min-w-0 flex-1 overflow-hidden">
+          <div ref={scrollRef} className="print-root absolute inset-0 overflow-y-auto">
+            <div ref={innerRef} className="relative flex min-h-full flex-col items-center pt-[20px] pb-[40px]">
+              <div
+                ref={stackRef}
+                className={`relative z-[1] flex flex-col items-center${viewMode === 'page' ? ' page-stack--paged' : ''}`}
                 style={{
-                  width: '100%',
-                  height: '100%',
+                  width: paperWidth,
+                  minHeight: paperHeight,
+                  marginLeft: pageClearShift || undefined,
                 }}
-              />
+              >
+                <Editor
+                  className="relative z-[1]"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                  }}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
         {showCatalog && catalogOpen && !catalogFloating && (
           <aside className="no-print absolute inset-y-0 left-0 z-10 flex w-[264px] flex-col border-r border-black/[0.08] bg-[#f5f6f7]">
@@ -269,6 +272,10 @@ export function WordEditor({
             />
           </div>
         )}
+        </div>
+
+        {/* AI 助手面板（右侧独立列，参考 eflink-draw / eflink-pptx） */}
+        {aiPanelOpen && <AIChatPanel />}
       </div>
 
       {searchPanelOpen && (

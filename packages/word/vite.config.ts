@@ -16,7 +16,7 @@ export default defineConfig({
     cssCodeSplit: false,
     rollupOptions: {
       external: (id) =>
-        /^(react|react-dom|react\/jsx-runtime|@hufe921\/canvas-editor|dexie|file-saver|jspdf|nanoid|lucide-react|zustand)/.test(id),
+        /^(react|react-dom|react\/jsx-runtime|@hufe921\/canvas-editor|dexie|file-saver|jspdf|nanoid|lucide-react|openai|zustand)/.test(id),
       output: {
         assetFileNames: (asset) =>
           asset.names?.[0]?.endsWith('.css') ? 'styles.css' : 'assets/[name][extname]',
