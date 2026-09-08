@@ -569,10 +569,11 @@ export function Toolbar({ editor }: ToolbarProps) {
       },
       { key: 'highlight-block', collapsible: true, node: <Placeholder icon={WordHighlightBlockIcon} label="高亮块" /> },
     ],
-    // AI 助手（不折叠）
+    // AI 助手（collapsible: false 保证窄屏下也不折叠进「更多」）
     [
       {
         key: 'ai-assistant',
+        collapsible: false,
         node: (
           <WordIconButton
             icon={Sparkles}
