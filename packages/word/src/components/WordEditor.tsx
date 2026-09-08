@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { Share2 } from 'lucide-react';
+import { Share2, MessageCircle } from 'lucide-react';
 import { useDocumentStore } from '../store/documentStore';
 import { useEditorStore } from '../store/editorStore';
 import { useUIStore } from '../store/uiStore';
@@ -205,6 +205,7 @@ export function WordEditor({
           {showToolbar && <Toolbar editor={editor} />}
           {/* 分享入口仅在宿主注入分享实现后出现（纯组件独立运行时不显示） */}
           {getWordShareHandler() !== null && (
+            <>
             <button
               type="button"
               onClick={() => void openShare()}
@@ -214,6 +215,16 @@ export function WordEditor({
               <Share2 size={14} />
               分享
             </button>
+            <button
+              type="button"
+              onClick={() => window.open('/contact', '_blank')}
+              title="问题反馈"
+              className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
+            >
+              <MessageCircle size={14} />
+              反馈
+            </button>
+            </>
           )}
         </div>
       )}
