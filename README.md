@@ -150,6 +150,18 @@ pnpm build        # 构建组件库与 demo
 - `.efword` 为 JSON 备份格式，不兼容 `.docx`；PDF 导出与打印预览一致（canvas 渲染）
 - 不做服务端同步与协同编辑
 
+## 联系我们
+
+- **在线体验**：<https://eflink.tech>（易飞文档 · 免费在线文档编辑器）
+- **问题反馈与交流**：[eflink.tech/contact](https://eflink.tech/contact)
+- **邮箱**：[support@eflink.tech](mailto:support@eflink.tech)
+
+使用微信或企业微信扫码添加（二维码长期有效）：
+
+<p align="center">
+  <img src="./docs/wecom-contact-qr.png" width="220" alt="企业微信二维码" />
+</p>
+
 ## License
 
 [MIT](./LICENSE)
