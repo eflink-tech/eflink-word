@@ -7,10 +7,13 @@ import {
   Settings,
   Printer,
   Check,
+  Pencil,
 } from 'lucide-react';
 import { PaperSizeIcon, PaperDirectionIcon, PageMarginIcon } from './StatusBarIcons';
 import { useUIStore, PAPER_SIZES, MARGIN_PRESETS } from '../../store/uiStore';
 import { useEditorStore } from '../../store/editorStore';
+import { useDocumentStore } from '../../store/documentStore';
+import { RenameDialog } from '../common/RenameDialog';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import type Editor from '@hufe921/canvas-editor';
 import { PageMode } from '@hufe921/canvas-editor';
@@ -179,6 +182,9 @@ export function StatusBar({ editor }: StatusBarProps) {
   const { catalogOpen, toggleCatalog, setSettingsOpen } = useUIStore();
   // 保存状态：内容变化置脏（红点），云端保存成功后恢复已保存
   const isDirty = useEditorStore((s) => s.isDirty);
+  // 文档名：跟随 documentStore.currentDocument.title（renameDocument 内部同步更新）
+  const docTitle = useDocumentStore((s) => s.currentDocument?.title) ?? '未命名文档';
+  const [renameOpen, setRenameOpen] = useState(false);
   // canvas-editor 事件驱动状态
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -269,6 +275,15 @@ export function StatusBar({ editor }: StatusBarProps) {
     }
   };
 
+  // 重命名：仅保存元数据（走存储适配器 rename），不影响内容 dirty 状态
+  const handleRenameConfirm = useCallback(async (name: string) => {
+    setRenameOpen(false);
+    const { currentDocId, renameDocument } = useDocumentStore.getState();
+    if (currentDocId) {
+      await renameDocument(currentDocId, name);
+    }
+  }, []);
+
   const isPaging = pageMode === PageMode.PAGING;
   const isContinuity = pageMode === PageMode.CONTINUITY;
 
@@ -290,8 +305,17 @@ export function StatusBar({ editor }: StatusBarProps) {
 
   return (
     <div className="no-print h-[30px] flex items-center justify-between bg-[#f5f6f7] text-xs text-[#646a73] px-[20px] z-[9]">
-      {/* 左侧：目录 + 分页/连页 + 页码 + 字数 */}
+      {/* 左侧：文档名 + 目录 + 分页/连页 + 页码 + 字数 */}
       <div className="flex items-center gap-[8px]">
+        <button
+          type="button"
+          className="flex items-center gap-1 px-1.5 py-0.5 -mx-1.5 rounded border-0 bg-transparent cursor-pointer hover:bg-[#e8e8e8] transition-colors text-[#333] max-w-[200px]"
+          onClick={() => setRenameOpen(true)}
+          title="点击重命名文档"
+        >
+          <Pencil size={11} className="flex-shrink-0 text-[#999]" />
+          <span className="truncate">{docTitle}</span>
+        </button>
         <button
           type="button"
           className={`${BTN} ${catalogOpen ? 'bg-[#e8e9eb]' : ''}`}
@@ -350,6 +374,13 @@ export function StatusBar({ editor }: StatusBarProps) {
           <Settings size={16} />
         </button>
       </div>
+      {renameOpen && (
+        <RenameDialog
+          currentName={docTitle}
+          onConfirm={handleRenameConfirm}
+          onCancel={() => setRenameOpen(false)}
+        />
+      )}
     </div>
   );
 }
