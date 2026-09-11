@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { PaperSizeIcon, PaperDirectionIcon, PageMarginIcon } from './StatusBarIcons';
 import { useUIStore, PAPER_SIZES, MARGIN_PRESETS } from '../../store/uiStore';
+import { useEditorStore } from '../../store/editorStore';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import type Editor from '@hufe921/canvas-editor';
 import { PageMode } from '@hufe921/canvas-editor';
@@ -176,6 +177,8 @@ function MarginMenu() {
 // 旧系统样式：30px 高度, 12px 字体, 三段式布局
 export function StatusBar({ editor }: StatusBarProps) {
   const { catalogOpen, toggleCatalog, setSettingsOpen } = useUIStore();
+  // 保存状态：内容变化置脏（红点），云端保存成功后恢复已保存
+  const isDirty = useEditorStore((s) => s.isDirty);
   // canvas-editor 事件驱动状态
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -305,6 +308,12 @@ export function StatusBar({ editor }: StatusBarProps) {
           页面：{currentPage}/{totalPages}
         </span>
         <span>字数：{wordCount}</span>
+        {/* 保存状态：dirty 时红色未保存，云端保存成功后灰色已保存 */}
+        {isDirty ? (
+          <span className="text-[#e02e2e]">● 未保存</span>
+        ) : (
+          <span className="text-[#8f959e]">✓ 已保存</span>
+        )}
       </div>
 
       {/* 右侧：缩放 + 纸张设置 + 全屏 */}

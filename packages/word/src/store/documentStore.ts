@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { createWordDocument, type DocumentMeta, type WordDocument } from '../types/document';
 import { getDefaultStorage } from '../storage/registry';
+import { readDraft } from '../storage/draft';
+import { useEditorStore } from './editorStore';
 
 /** 文档 id 变化监听器：新建文档导致当前文档切换时触发，宿主据此同步路由等 */
 export type DocIdChangeListener = (id: string) => void;
@@ -21,7 +23,7 @@ interface DocumentState {
   deleteDocument: (id: string) => Promise<void>;
   renameDocument: (id: string, title: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
-  /** 打开文档；返回加载到的文档，不存在时返回 undefined */
+  /** 打开文档；返回加载到的文档，不存在时返回 undefined；云端加载失败时回退本地草稿恢复 */
   openDocument: (id: string) => Promise<WordDocument | undefined>;
   /** 注册/注销文档 id 变化监听（WordEditor 内部使用） */
   setDocIdChangeListener: (listener: DocIdChangeListener | null) => void;
@@ -86,7 +88,18 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   openDocument: async (id: string) => {
-    const doc = await getDefaultStorage().load(id);
+    let doc: WordDocument | undefined;
+    try {
+      doc = await getDefaultStorage().load(id);
+    } catch (err) {
+      // 云端加载失败（网络异常/存储适配器 load 抛错）：回退本地草稿兜底恢复内容；
+      // 云端加载成功时不读草稿
+      const draft = readDraft(id);
+      if (!draft) throw err;
+      doc = { ...createWordDocument({ title: '未命名文档（本地草稿恢复）', content: draft }), id };
+      // 草稿内容尚未落库：恢复后视为未保存，由用户手动 ⌘S/Ctrl+S 落云端
+      useEditorStore.setState({ isDirty: true });
+    }
     if (doc) {
       set({ currentDocId: id, currentDocument: doc });
     }

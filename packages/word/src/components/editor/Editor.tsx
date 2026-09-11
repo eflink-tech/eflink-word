@@ -35,9 +35,13 @@ export function Editor({ className = '', style }: EditorProps) {
   const pendingDocRef = useRef<IEditorData | null>(null);
   // 标记组件是否已卸载，防止在已销毁的 editor 上执行异步操作
   const destroyedRef = useRef(false);
+  // 程序化装载内容（打开/切换文档）触发的 contentChange 计数：
+  // canvas-editor 的 executeSetValue 也会发出 contentChange，但那不算用户编辑，不应置 dirty。
+  // 每次 executeSetValue 恰好产生一次异步 contentChange，故装载前 +1、事件到来时 -1 抵消。
+  const suppressDirtyCountRef = useRef(0);
 
   const setEditor = useEditorStore((s) => s.setEditor);
-  const setIsDirty = useEditorStore((s) => s.setIsDirty);
+  const markContentChanged = useEditorStore((s) => s.markContentChanged);
   const setRangeStyle = useEditorStore((s) => s.setRangeStyle);
   const setCurrentPage = useEditorStore((s) => s.setCurrentPage);
   const setTotalPages = useEditorStore((s) => s.setTotalPages);
@@ -130,7 +134,12 @@ export function Editor({ className = '', style }: EditorProps) {
     bridgeRef.current = mountEventBridge(editor, {
       onRangeStyleChange: (rangeStyle) => setRangeStyle(rangeStyle),
       onContentChange: () => {
-        setIsDirty(true);
+        // 程序化装载内容不算用户编辑，不置 dirty
+        if (suppressDirtyCountRef.current > 0) {
+          suppressDirtyCountRef.current -= 1;
+        } else {
+          markContentChanged();
+        }
         refreshWordCount();
       },
       onPageNoChange: (pageNo) => setCurrentPage(pageNo + 1),
@@ -143,6 +152,8 @@ export function Editor({ className = '', style }: EditorProps) {
 
     // init 完成后，检查是否有排队等待的文档切换请求
     if (pendingDocRef.current) {
+      // 程序化装载：登记抑制一次 contentChange 驱动的 dirty 标记
+      suppressDirtyCountRef.current += 1;
       editor.command.executeSetValue(pendingDocRef.current);
       pendingDocRef.current = null;
     }
@@ -171,6 +182,8 @@ export function Editor({ className = '', style }: EditorProps) {
       footer: currentDocument.content?.footer ?? [],
     };
     if (editorRef.current) {
+      // 程序化装载文档内容：登记抑制一次 contentChange 驱动的 dirty 标记
+      suppressDirtyCountRef.current += 1;
       editorRef.current.command.executeSetValue(data);
     } else {
       // 排队：init 完成时应用

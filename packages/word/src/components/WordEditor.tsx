@@ -14,6 +14,7 @@ import { StatusBar } from './statusbar/StatusBar';
 import { EditorSettingsModal } from './statusbar/EditorSettingsModal';
 import { useHotkeys } from '../hooks/useHotkeys';
 import { setDefaultStorage } from '../storage/registry';
+import { writeDraft, removeDraft } from '../storage/draft';
 import { getWordShareHandler } from '../core/share/shareBridge';
 import type { WordDocument } from '../types/document';
 import type { StorageAdapter } from '../storage/types';
@@ -60,7 +61,7 @@ export function WordEditor({
   onDocError,
 }: WordEditorProps) {
   const { currentDocument, openDocument, setDocIdChangeListener } = useDocumentStore();
-  const { editor, save, isDirty } = useEditorStore();
+  const { editor, save, isDirty, contentVersion } = useEditorStore();
   const {
     viewMode,
     paperSize,
@@ -144,14 +145,39 @@ export function WordEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docId, storage]);
 
-  // 自动保存（防抖 2 秒）
+  // 本地草稿兜底（防抖 2 秒，沿用原自动保存间隔）：内容变化后写入 localStorage。
+  // 不调用云端保存、不清 dirty（dirty 仅在云端保存成功后清除）；
+  // dirty 停留 true 期间靠 contentVersion（每次编辑递增）驱动防抖重新计时。
   useEffect(() => {
     if (!isDirty || !editor) return;
     const timer = setTimeout(() => {
-      save();
+      try {
+        const { currentDocId } = useDocumentStore.getState();
+        if (!currentDocId) return;
+        const value = editor.command.getValue();
+        if (value?.data) writeDraft(currentDocId, value.data);
+      } catch {
+        // 草稿写入失败静默降级（隐私模式/存储不可用等），不影响编辑
+      }
     }, 2000);
     return () => clearTimeout(timer);
-  }, [isDirty, editor, save]);
+  }, [isDirty, editor, contentVersion]);
+
+  // 注册 window bridge：宿主可在路由跳转/离页前查询脏状态、触发保存或丢弃本地草稿
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).__eflinkEditorBridge = {
+      isDirty: () => useEditorStore.getState().isDirty,
+      save: () => useEditorStore.getState().save(),
+      discard: () => {
+        // removeDraft 内部已 try/catch，静默失败
+        const docId = useDocumentStore.getState().currentDocId;
+        if (docId) removeDraft(docId);
+      },
+    };
+    return () => {
+      delete (window as unknown as Record<string, unknown>).__eflinkEditorBridge;
+    };
+  }, []);
 
   // 有未保存修改时拦截页面关闭（独立站点行为；嵌入宿主默认关闭）
   useEffect(() => {
