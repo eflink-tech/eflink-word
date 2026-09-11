@@ -16,6 +16,7 @@ import {
   AlignJustify,
   Eye,
   FileUp,
+  ImageDown,
   ImagePlus,
   Keyboard,
   Layout,
@@ -49,7 +50,7 @@ import { LoadingDialog } from '../../components/common/LoadingDialog';
 import { RenameDialog } from '../../components/common/RenameDialog';
 import { ShortcutsDialog } from '../../components/common/ShortcutsDialog';
 import { formatDateInsert, type DateInsertFormat } from '../../core/utils/dateInsert';
-import { exportEfword, exportPdf, importEfword } from '../../core/utils/exportImport';
+import { exportEfword, exportImage, exportPdf, importEfword } from '../../core/utils/exportImport';
 /** 6 种分割线样式（对齐旧系统 data-separator 值） */
 const HR_SEPARATORS: { label: string; value: string }[] = [
   { label: '实线', value: '0,0' },
@@ -102,6 +103,7 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
   const [renameOpen, setRenameOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
+  const [imageExporting, setImageExporting] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   useClickOutside(rootRef, closeAll, open);
@@ -201,6 +203,25 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
     }
   };
 
+  // 与导出 PDF 同一渲染管线：loading 遮罩 → 打印模式渲染 → 下载（失败 console.error）
+  const exportImageFile = async () => {
+    if (!editor || imageExporting) return;
+    closeAll();
+    flushSync(() => setImageExporting(true));
+    // 先让 loading 遮罩完成绘制，再执行耗时的 canvas 渲染
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+    try {
+      await exportImage(editor, getDocTitle());
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('导出图片失败:', err);
+    } finally {
+      setImageExporting(false);
+    }
+  };
+
   const triggerImport = () => {
     if (importInputRef.current) {
       importInputRef.current.value = '';
@@ -263,6 +284,12 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
             label: '导出 PDF',
             icon: FileDown,
             action: exportPdfFile,
+          },
+          {
+            key: 'export-image',
+            label: '导出图片',
+            icon: ImageDown,
+            action: exportImageFile,
           },
           {
             key: 'import',
@@ -609,6 +636,7 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
       )}
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
       {pdfExporting && <LoadingDialog message="正在导出 PDF，请稍候..." />}
+      {imageExporting && <LoadingDialog message="正在导出图片，请稍候..." />}
     </div>
   );
 }
