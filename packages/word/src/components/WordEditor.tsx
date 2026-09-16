@@ -131,14 +131,21 @@ export function WordEditor({
     let disposed = false;
     // 切换前清掉上一篇的未保存标记，避免自动保存误写新文档
     useEditorStore.setState({ isDirty: false });
-    openDocument(docId).then((doc) => {
-      if (disposed) return;
-      if (!doc) {
-        onDocError?.(new Error(`文档不存在: ${docId}`));
-        return;
-      }
-      onDocLoaded?.(doc);
-    });
+    openDocument(docId)
+      .then((doc) => {
+        if (disposed) return;
+        if (!doc) {
+          onDocError?.(new Error(`文档不存在: ${docId}`));
+          return;
+        }
+        onDocLoaded?.(doc);
+      })
+      // openDocument 在「加载失败且无本地草稿」时抛错（内部无 catch）：
+      // 不接住的话错误成为 unhandled rejection，onDocError 收不到，
+      // 界面会停留在内存 store 里上一篇文档的内容，用户误以为那就是当前文档
+      .catch((err) => {
+        if (!disposed) onDocError?.(err);
+      });
     return () => {
       disposed = true;
     };
