@@ -5,12 +5,12 @@
  * 除本文件头外仅做计划列出的定点适配，保持与上游一致便于 diff。
  */
 import Color from 'color'
+import type { IElement, Editor } from '@hufe921/canvas-editor'
+import type { ParagraphChild, TableVerticalAlign } from 'docx'
 import {
-  IElement,
   ElementType,
   TitleLevel,
   ListStyle,
-  Editor,
   RowFlex,
   TableBorder,
   VerticalAlign,
@@ -26,7 +26,6 @@ import {
   Footer,
   Table,
   HeadingLevel,
-  ParagraphChild,
   TextRun,
   Tab,
   ExternalHyperlink,
@@ -54,10 +53,9 @@ import {
 } from 'docx'
 import {
   loadImage,
-  saveAs,
   measureFontMetrics,
   measureTextWidth
-} from './utils'
+} from './docxUtils'
 
 type LineRuleValue = (typeof LineRuleType)[keyof typeof LineRuleType]
 
@@ -114,9 +112,9 @@ function getParagraphAlignment(rowFlex?: RowFlex): DocxAlignment | undefined {
   }
 }
 
-// 单元格垂直对齐映射
-type DocxCellVerticalAlign =
-  (typeof DocxVerticalAlign)[keyof typeof DocxVerticalAlign]
+// 单元格垂直对齐映射（docx@9 类型收紧：TableCell 仅支持 top/center/bottom，
+// 不支持的值如 "both" 回退为 undefined）
+type DocxCellVerticalAlign = TableVerticalAlign
 function getCellVerticalAlign(
   align?: VerticalAlign
 ): DocxCellVerticalAlign | undefined {
@@ -797,10 +795,11 @@ declare module '@hufe921/canvas-editor' {
   }
 }
 
-export default function (editor: Editor) {
+export function createDocxExporter(editor: Editor) {
   return async function (options: IExportDocxOption): Promise<Blob> {
     checkboxIndexByControlId.clear()
-    const { fileName, toc } = options
+    // fileName 由入口层负责命名下载（下载职责上移），此处仅消费 toc
+    const { toc } = options
     const {
       data: { header, main, footer },
       options: editorOptions
@@ -919,7 +918,6 @@ export default function (editor: Editor) {
     })
 
     const blob = await Packer.toBlob(doc)
-    saveAs(blob, `${fileName}.docx`)
     return blob
   }
 }
