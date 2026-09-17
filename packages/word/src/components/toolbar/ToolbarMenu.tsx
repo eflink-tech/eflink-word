@@ -319,6 +319,22 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
         [
           { key: 'new', label: '新建文档', icon: FilePlus2, shortcut: 'Ctrl N', action: createNew },
           { key: 'rename', label: '修改文档名称', icon: FileText, action: openRenameDialog },
+        ],
+        [
+          {
+            key: 'import-docx',
+            label: '导入 Word (.docx)',
+            icon: FileInput,
+            action: triggerDocxImport,
+          },
+          {
+            key: 'import',
+            label: '导入文档 (.efword)',
+            icon: FileUp,
+            action: triggerImport,
+          },
+        ],
+        [
           {
             key: 'export-docx',
             label: '导出 Word (.docx)',
@@ -343,18 +359,8 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
             icon: ImageDown,
             action: exportImageFile,
           },
-          {
-            key: 'import',
-            label: '导入文档 (.efword)',
-            icon: FileUp,
-            action: triggerImport,
-          },
-          {
-            key: 'import-docx',
-            label: '导入 Word (.docx)',
-            icon: FileInput,
-            action: triggerDocxImport,
-          },
+        ],
+        [
           {
             key: 'save',
             label: '保存到浏览器',
