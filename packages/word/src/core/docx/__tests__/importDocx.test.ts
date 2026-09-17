@@ -41,7 +41,7 @@ describe('createDocxImporter', () => {
     const buffer = await buildDocx(
       paragraphXml('第一段') + paragraphXml('第二段'),
     );
-    await createDocxImporter(command as never as Editor['command'])({
+    await createDocxImporter(command as unknown as Editor['command'])({
       arrayBuffer: buffer,
     });
 
@@ -60,7 +60,7 @@ describe('createDocxImporter', () => {
         '<w:r><w:t>普通</w:t></w:r>' + boldRunXml('加粗'),
       ),
     );
-    await createDocxImporter(command as never as Editor['command'])({
+    await createDocxImporter(command as unknown as Editor['command'])({
       arrayBuffer: buffer,
     });
 
@@ -79,9 +79,9 @@ describe('createDocxImporter', () => {
     zip.file('[Content_Types].xml', CONTENT_TYPES_PLACEHOLDER);
     const buffer = await zip.generateAsync({ type: 'arraybuffer' });
     await expect(
-      createDocxImporter(command as never as Editor['command'])({
+      createDocxImporter(command as unknown as Editor['command'])({
         arrayBuffer: buffer,
       }),
-    ).rejects.toThrow('docx');
+    ).rejects.toThrow('无效的 docx 文件');
   });
 });
