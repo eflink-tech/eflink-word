@@ -11,6 +11,8 @@ import {
   Download,
   Droplet,
   FileDown,
+  FileInput,
+  FileOutput,
   FilePlus2,
   FileText,
   AlignJustify,
@@ -46,6 +48,7 @@ import { useUIStore } from '../../store/uiStore';
 import { useImageInsert, useLinkDialog } from './useInsertActions';
 import { WatermarkModal } from './WatermarkModal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { ErrorDialog } from '../common/ErrorDialog';
 import { LoadingDialog } from '../../components/common/LoadingDialog';
 import { RenameDialog } from '../../components/common/RenameDialog';
 import { ShortcutsDialog } from '../../components/common/ShortcutsDialog';
@@ -104,8 +107,12 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
   const [imageExporting, setImageExporting] = useState(false);
+  const [docxExporting, setDocxExporting] = useState(false);
+  const [docxImporting, setDocxImporting] = useState(false);
+  const [docxError, setDocxError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const docxImportInputRef = useRef<HTMLInputElement>(null);
   useClickOutside(rootRef, closeAll, open);
 
   const { open: openImagePicker, input: imageInput } = useImageInsert(editor);
@@ -222,6 +229,45 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
     }
   };
 
+  // 导出 Word：动态加载 docx 模块（docx/jszip 独立 chunk，不进主包），失败弹错误窗
+  const exportDocxFile = async () => {
+    if (!editor || docxExporting) return;
+    closeAll();
+    flushSync(() => setDocxExporting(true));
+    try {
+      const { exportDocx } = await import('../../core/docx');
+      await exportDocx(editor, getDocTitle());
+    } catch (err) {
+      setDocxError(err instanceof Error ? err.message : '导出 Word 失败，请重试');
+    } finally {
+      setDocxExporting(false);
+    }
+  };
+
+  const triggerDocxImport = () => {
+    closeAll();
+    if (docxImportInputRef.current) {
+      docxImportInputRef.current.value = '';
+      docxImportInputRef.current.click();
+    }
+  };
+
+  // 导入 Word：解析后覆盖当前文档（与 .efword 导入一致），失败弹错误窗
+  const handleDocxImportChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editor) return;
+    flushSync(() => setDocxImporting(true));
+    try {
+      const { importDocx } = await import('../../core/docx');
+      await importDocx(editor, file);
+    } catch (err) {
+      setDocxError(err instanceof Error ? err.message : '导入 Word 失败，请重试');
+    } finally {
+      setDocxImporting(false);
+      if (docxImportInputRef.current) docxImportInputRef.current.value = '';
+    }
+  };
+
   const triggerImport = () => {
     if (importInputRef.current) {
       importInputRef.current.value = '';
@@ -274,6 +320,12 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
           { key: 'new', label: '新建文档', icon: FilePlus2, shortcut: 'Ctrl N', action: createNew },
           { key: 'rename', label: '修改文档名称', icon: FileText, action: openRenameDialog },
           {
+            key: 'export-docx',
+            label: '导出 Word (.docx)',
+            icon: FileOutput,
+            action: exportDocxFile,
+          },
+          {
             key: 'export-efword',
             label: '导出文档 (.efword)',
             icon: Download,
@@ -296,6 +348,12 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
             label: '导入文档 (.efword)',
             icon: FileUp,
             action: triggerImport,
+          },
+          {
+            key: 'import-docx',
+            label: '导入 Word (.docx)',
+            icon: FileInput,
+            action: triggerDocxImport,
           },
           {
             key: 'save',
@@ -611,6 +669,13 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
         className="hidden"
         onChange={handleImportChange}
       />
+      <input
+        ref={docxImportInputRef}
+        type="file"
+        accept=".docx"
+        className="hidden"
+        onChange={handleDocxImportChange}
+      />
       {watermarkOpen && (
         <WatermarkModal
           initialValue={watermark}
@@ -637,6 +702,15 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
       {pdfExporting && <LoadingDialog message="正在导出 PDF，请稍候..." />}
       {imageExporting && <LoadingDialog message="正在导出图片，请稍候..." />}
+      {docxExporting && <LoadingDialog message="正在导出 Word，请稍候..." />}
+      {docxImporting && <LoadingDialog message="正在导入 Word，请稍候..." />}
+      {docxError && (
+        <ErrorDialog
+          title="操作失败"
+          message={docxError}
+          onClose={() => setDocxError(null)}
+        />
+      )}
     </div>
   );
 }
