@@ -4,6 +4,9 @@
  * 收编版本: commit 7b630c1c8afdbf3d63f94f2ea5b9e69b2da60b04（2026-09-12）
  * 除本文件头外仅做计划列出的定点适配，保持与上游一致便于 diff。
  */
+import { saveAs } from 'file-saver';
+export { saveAs };
+
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -11,18 +14,6 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = reject
     img.src = src
   })
-}
-
-export function saveAs(blob: Blob, name: string) {
-  const a = document.createElement('a')
-  a.href = window.URL.createObjectURL(blob)
-  a.download = name
-  // 部分浏览器（如 Safari）要求锚点挂载到文档中才能触发下载
-  a.style.display = 'none'
-  document.body.append(a)
-  a.click()
-  a.remove()
-  window.URL.revokeObjectURL(a.href)
 }
 
 // docx 数值解析容错：剥离单位后缀（如 "42.67pt"）与空白
