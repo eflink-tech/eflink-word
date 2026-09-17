@@ -329,7 +329,7 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
           },
           {
             key: 'import',
-            label: '导入文档 (.efword)',
+            label: '导入数据 (.efw.json)',
             icon: FileUp,
             action: triggerImport,
           },
@@ -343,7 +343,7 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
           },
           {
             key: 'export-efword',
-            label: '导出文档 (.efword)',
+            label: '导出数据 (.efw.json)',
             icon: Download,
             action: exportEfwordFile,
           },
@@ -671,7 +671,7 @@ export function ToolbarMenu({ editor }: ToolbarMenuProps) {
       <input
         ref={importInputRef}
         type="file"
-        accept=".efword,application/json,.json"
+        accept=".efw.json,.efword,application/json,.json"
         className="hidden"
         onChange={handleImportChange}
       />

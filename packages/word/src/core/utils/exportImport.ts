@@ -1,5 +1,5 @@
 // 文档导出/导入
-// - .efword：canvas-editor 原生数据 + 元信息，100% 可还原
+// - .efw.json：canvas-editor 原生数据 + 元信息，100% 可还原
 // - PDF：canvas 打印模式渲染，与屏显/打印预览一致
 // - 图片：复用 PDF 的打印渲染管线，单页直下 PNG，多页纵向拼成一张长图
 import type Editor from '@hufe921/canvas-editor';
@@ -9,7 +9,7 @@ import { saveAs } from 'file-saver';
 
 export const EFWORD_FORMAT = 'efword' as const;
 export const EFWORD_VERSION = '1.0';
-export const EFWORD_EXTENSION = '.efword';
+export const EFWORD_EXTENSION = '.efw.json';
 export const EFWORD_APP_NAME = '易飞文档';
 export const EFWORD_SOURCE_URL = 'https://eflink.tech/office/word';
 
@@ -67,7 +67,7 @@ function parseImportPayload(text: string): Record<string, unknown> {
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('文件格式无效，请选择 .efword 文件');
+    throw new Error('文件格式无效，请选择 .efw.json 数据文件');
   }
 
   if (isEfwordFile(parsed)) {
@@ -76,7 +76,7 @@ function parseImportPayload(text: string): Record<string, unknown> {
   if (isRawEditorData(parsed)) {
     return parsed;
   }
-  throw new Error('无法识别的文档格式，请使用 .efword 文件');
+  throw new Error('无法识别的文档格式，请使用 .efw.json 数据文件');
 }
 
 /** exportEfword 可选项 */
@@ -86,7 +86,7 @@ export interface ExportEfwordOptions {
 }
 
 /**
- * 导出为 .efword（canvas-editor 原生格式，可完整还原）
+ * 导出为 .efw.json 数据文件（canvas-editor 原生格式，可完整还原）
  */
 export async function exportEfword(
   editor: Editor,
@@ -109,7 +109,7 @@ export async function exportEfword(
 }
 
 /**
- * 从 .efword 导入（兼容纯 canvas-editor JSON）
+ * 从 .efw.json 数据文件导入（兼容旧版 .efword 与纯 canvas-editor JSON）
  */
 export async function importEfword(editor: Editor, file: File): Promise<void> {
   const text = await file.text();

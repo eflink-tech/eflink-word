@@ -17,7 +17,7 @@ export { setEditorBackHref } from './core/chrome';
 export { setWordShareHandler } from './core/share/shareBridge';
 export type { WordShareHandler, WordShareResult } from './core/share/shareBridge';
 
-// headless：.efword 文档备份导入导出、PDF 导出（编辑器实例可经 useEditorStore 获取）
+// headless：.efw.json 文档数据导入导出、PDF 导出（编辑器实例可经 useEditorStore 获取）
 export {
   exportEfword,
   importEfword,

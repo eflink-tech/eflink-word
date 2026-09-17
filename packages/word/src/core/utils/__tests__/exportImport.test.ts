@@ -61,12 +61,12 @@ describe('exportImport', () => {
   });
 
   describe('buildEfwordFilename', () => {
-    it('生成 xxx.efword 文件名', () => {
-      expect(buildEfwordFilename('测试文档')).toBe('测试文档.efword');
+    it('生成 xxx.efw.json 文件名', () => {
+      expect(buildEfwordFilename('测试文档')).toBe('测试文档.efw.json');
     });
 
     it('过滤非法文件名字符', () => {
-      expect(buildEfwordFilename('a/b:c')).toBe('a_b_c.efword');
+      expect(buildEfwordFilename('a/b:c')).toBe('a_b_c.efw.json');
     });
   });
 
@@ -78,7 +78,7 @@ describe('exportImport', () => {
       expect(saveAs).toHaveBeenCalled();
       const [blob, filename] = (saveAs as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
       expect(blob).toBeInstanceOf(Blob);
-      expect(filename).toBe('test.efword');
+      expect(filename).toBe('test.efw.json');
       const text = await blob.text();
       const parsed = JSON.parse(text);
       expect(parsed.format).toBe(EFWORD_FORMAT);
@@ -90,11 +90,11 @@ describe('exportImport', () => {
       });
     });
 
-    it('默认文件名为未命名文档.efword', async () => {
+    it('默认文件名为未命名文档.efw.json', async () => {
       const editor = makeEditor();
       await exportEfword(editor);
       const [, filename] = (saveAs as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-      expect(filename).toBe('未命名文档.efword');
+      expect(filename).toBe('未命名文档.efw.json');
     });
   });
 
