@@ -25,15 +25,31 @@ function assertNotLegacyDoc(file: File, buffer: ArrayBuffer): void {
   }
 }
 
+/** 导入文件大小上限：解析全程在内存中进行（arrayBuffer + JSZip + DOMParser），防止超大文档压垮标签页 */
+const MAX_IMPORT_SIZE = 100 * 1024 * 1024;
+
 /**
  * 导入 docx：解析并覆盖当前文档内容
  * @throws 旧版 .doc 格式、非标准 docx 结构时抛出中文错误
  */
 export async function importDocx(editor: Editor, file: File): Promise<void> {
+  if (file.size > MAX_IMPORT_SIZE) {
+    throw new Error('文档过大（超过 100MB），请拆分后再导入');
+  }
   const arrayBuffer = await file.arrayBuffer();
   assertNotLegacyDoc(file, arrayBuffer);
   const { createDocxImporter } = await import('./importDocx');
-  createDocxImporter(editor.command)({ arrayBuffer });
+  try {
+    // 必须 await：否则解析失败变成 unhandled rejection，UI 层 catch 接不到，用户看到静默失败
+    await createDocxImporter(editor.command)({ arrayBuffer });
+  } catch (error) {
+    // 收编代码对缺 document.xml 等场景已抛中文错误，原样透传；
+    // 其余（JSZip 对非法 zip 的英文原始错误）兜底转为中文提示
+    if (error instanceof Error && /[一-鿿]/.test(error.message)) {
+      throw error;
+    }
+    throw new Error('文件损坏或不是有效的 .docx 文档，请确认文件后重试');
+  }
 }
 
 /** 导出 docx 并触发浏览器下载 */

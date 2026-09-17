@@ -30,6 +30,14 @@ describe('importDocx 入口拦截', () => {
       importDocx(fakeEditor, makeFile(new Uint8Array(8), '报告.doc')),
     ).rejects.toThrow('.doc');
   });
+
+  it('非 zip 字节（损坏/伪装文件） rejects 且错误信息为中文', async () => {
+    // 回归锚点：入口层必须 await 内部解析 Promise，否则此处变为 unhandled rejection 而非 rejects
+    const junk = new Uint8Array(64).fill(0x7f);
+    await expect(
+      importDocx(fakeEditor, makeFile(junk, '损坏.docx')),
+    ).rejects.toThrow('不是有效的 .docx 文档');
+  });
 });
 
 describe('exportDocx 文件名处理', () => {
