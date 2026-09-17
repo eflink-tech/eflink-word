@@ -4,10 +4,8 @@
  * 收编版本: commit 7b630c1c8afdbf3d63f94f2ea5b9e69b2da60b04（2026-09-12）
  * 除本文件头外仅做计划列出的定点适配，保持与上游一致便于 diff。
  */
+import type { Command, IElement, IEditorData } from '@hufe921/canvas-editor'
 import {
-  Command,
-  IElement,
-  IEditorData,
   ElementType,
   RowFlex,
   VerticalAlign,
@@ -19,7 +17,7 @@ import {
   ControlType
 } from '@hufe921/canvas-editor'
 import JSZip from 'jszip'
-import { measureFontMetrics, parseDocxNumber } from './utils'
+import { measureFontMetrics, parseDocxNumber } from './docxUtils'
 
 declare module '@hufe921/canvas-editor' {
   interface Command {
@@ -466,7 +464,7 @@ class DocxParser {
     await this.parseNumbering()
     const docFile = this.zip.file('word/document.xml')
     if (!docFile) {
-      throw new Error('invalid docx: word/document.xml not found')
+      throw new Error('无效的 docx 文件：缺少 word/document.xml，请确认为标准 .docx 格式')
     }
     const docDom = new DOMParser().parseFromString(
       await docFile.async('text'),
@@ -1810,7 +1808,7 @@ class DocxParser {
 // 导入入口
 // =====================================================================
 
-export default function (command: Command) {
+export function createDocxImporter(command: Command) {
   return async function (options: IImportDocxOption) {
     const { arrayBuffer, isAppend } = options
     const zip = await JSZip.loadAsync(arrayBuffer)
