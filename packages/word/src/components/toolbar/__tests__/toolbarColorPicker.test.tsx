@@ -5,9 +5,9 @@ import { loadRecent } from '../../../components/color/recentColors';
 
 describe('recentStorageKeyForMode', () => {
   it('maps each mode to a distinct storage key', () => {
-    expect(recentStorageKeyForMode('color')).toBe('eflink-word:recent-colors:color');
-    expect(recentStorageKeyForMode('highlight')).toBe('eflink-word:recent-colors:highlight');
-    expect(recentStorageKeyForMode('shading')).toBe('eflink-word:recent-colors:shading');
+    expect(recentStorageKeyForMode('color')).toBe('doculuma:word:recent-colors:color');
+    expect(recentStorageKeyForMode('highlight')).toBe('doculuma:word:recent-colors:highlight');
+    expect(recentStorageKeyForMode('shading')).toBe('doculuma:word:recent-colors:shading');
   });
 });
 

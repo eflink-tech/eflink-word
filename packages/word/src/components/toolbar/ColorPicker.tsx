@@ -3,6 +3,7 @@
 // - shading：canvas-editor 无对应命令，Toolbar 以本地 state 包装保持视觉一致
 import { useState, useRef, useCallback } from 'react';
 import { useI18n } from '@eflink-tech/office-kit';
+import { RECENT_COLORS_KEY_PREFIX } from '../../storage/keys';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { ColorPicker as StandaloneColorPicker, type ColorSelectOptions } from '../../components/color';
 import {
@@ -26,7 +27,7 @@ interface ColorPickerProps {
 }
 
 export function recentStorageKeyForMode(mode: ToolbarColorMode): string {
-  return `eflink-word:recent-colors:${mode}`;
+  return `${RECENT_COLORS_KEY_PREFIX}${mode}`;
 }
 
 const MODE_TITLE_KEYS: Record<ToolbarColorMode, string> = {

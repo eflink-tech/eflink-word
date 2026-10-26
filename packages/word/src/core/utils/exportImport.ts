@@ -11,8 +11,8 @@ import { OfficeError } from '@eflink-tech/office-kit';
 export const EFWORD_FORMAT = 'efword' as const;
 export const EFWORD_VERSION = '1.0';
 export const EFWORD_EXTENSION = '.efw.json';
-export const EFWORD_APP_NAME = '易飞文档';
-export const EFWORD_SOURCE_URL = 'https://eflink.tech/office/word';
+export const EFWORD_APP_NAME = 'DocuLuma Word';
+export const EFWORD_SOURCE_URL = 'https://offices.doculuma.com/word';
 
 /** 导出文件中的来源信息（便于识别文档出处） */
 export interface EfwordSource {
@@ -82,7 +82,7 @@ function parseImportPayload(text: string): Record<string, unknown> {
 
 /** exportEfword 可选项 */
 export interface ExportEfwordOptions {
-  /** 来源信息覆盖（嵌入宿主时可标识自己的应用）；缺省为易飞文档 */
+  /** 来源信息覆盖（嵌入宿主时可标识自己的应用）；缺省为 DocuLuma Word */
   source?: EfwordSource;
 }
 

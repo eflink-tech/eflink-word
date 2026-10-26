@@ -5,6 +5,11 @@ import { X } from 'lucide-react';
 import { useI18n } from '@eflink-tech/office-kit';
 import { FONT_SIZES } from '../../components/toolbar/FontSizeSelect';
 import { ColorPicker as StandaloneColorPicker } from '../../components/color';
+import {
+  SETTINGS_FOOTER_COLOR_KEY,
+  SETTINGS_HEADER_COLOR_KEY,
+  SETTINGS_PAGENUMBER_COLOR_KEY,
+} from '../../storage/keys';
 import { useUIStore } from '../../store/uiStore';
 
 /** 与 FontFamilySelect 同源，该文件未导出常量 */
@@ -486,7 +491,7 @@ export function EditorSettingsModal() {
                     <InlineColorButton
                       value={headerColor}
                       onChange={setHeaderColor}
-                      storageKey="eflink-word:settings:header-color"
+                      storageKey={SETTINGS_HEADER_COLOR_KEY}
                     />
                   </div>
                 </>
@@ -550,7 +555,7 @@ export function EditorSettingsModal() {
                     <InlineColorButton
                       value={footerColor}
                       onChange={setFooterColor}
-                      storageKey="eflink-word:settings:footer-color"
+                      storageKey={SETTINGS_FOOTER_COLOR_KEY}
                     />
                   </div>
                 </>
@@ -630,7 +635,7 @@ export function EditorSettingsModal() {
                       <InlineColorButton
                         value={pageNumberColor}
                         onChange={setPageNumberColor}
-                        storageKey="eflink-word:settings:pagenumber-color"
+                        storageKey={SETTINGS_PAGENUMBER_COLOR_KEY}
                       />
                     </div>
                   </div>

@@ -1,5 +1,7 @@
 // AI 数据持久化（Dexie）：设置 / 会话历史 / 内置提示词模板
 import Dexie, { type Table } from 'dexie';
+import { AI_INDEXEDDB_NAME } from '../storage/keys';
+import { importLegacyDb, LEGACY_AI_INDEXED_DB_NAME } from '../storage/legacy';
 import type { AISettings, Conversation, Template } from './types';
 
 export class AIDb extends Dexie {
@@ -8,7 +10,7 @@ export class AIDb extends Dexie {
   templates!: Table<Template, string>;
 
   constructor() {
-    super('eflink-word-ai');
+    super(AI_INDEXEDDB_NAME);
     this.version(1).stores({
       conversations: 'id, updatedAt',
       settings: 'key',
@@ -19,17 +21,39 @@ export class AIDb extends Dexie {
 
 export const aiDb = new AIDb();
 
+/** 表为空时导入旧库（eflink-word-ai）对应数据；只读旧库、失败静默、进程内只跑一次。 */
+async function importTableIfEmpty<T>(table: Table<T, string>, rows: unknown[] | undefined): Promise<void> {
+  if (!rows || rows.length === 0) return;
+  if ((await table.count()) > 0) return;
+  await table.bulkPut(rows as T[]);
+}
+
+export function ensureAiLegacyImport(): Promise<void> {
+  return importLegacyDb(
+    'ai',
+    LEGACY_AI_INDEXED_DB_NAME,
+    ['conversations', 'settings', 'templates'],
+    async (rows) => {
+      await importTableIfEmpty(aiDb.conversations, rows.conversations);
+      await importTableIfEmpty(aiDb.settings, rows.settings);
+      await importTableIfEmpty(aiDb.templates, rows.templates);
+    },
+  );
+}
+
 const SETTINGS_KEY = 'main';
 const DEFAULT_SETTINGS: AISettings = { baseUrl: '', apiKey: '', model: '' };
 
 export const aiSettingsStore = {
   async getSettings(): Promise<AISettings> {
+    await ensureAiLegacyImport();
     const row = await aiDb.settings.get(SETTINGS_KEY);
     if (!row) return { ...DEFAULT_SETTINGS };
     return { baseUrl: row.baseUrl, apiKey: row.apiKey, model: row.model };
   },
 
   async saveSettings(s: AISettings): Promise<void> {
+    await ensureAiLegacyImport();
     await aiDb.settings.put({ key: SETTINGS_KEY, ...s });
   },
 

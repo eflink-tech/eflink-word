@@ -8,7 +8,7 @@ import type { StorageAdapter } from '../types';
 // 每个适配器跑同一组行为用例（IndexedDB 经 fake-indexeddb 模拟）
 const adapters: [string, () => StorageAdapter][] = [
   ['memoryStorage', () => memoryStorage()],
-  ['indexedDbStorage', () => indexedDbStorage('eflink-word-test')],
+  ['indexedDbStorage', () => indexedDbStorage('doculuma-word-test')],
 ];
 
 describe.each(adapters)('%s', (_, create) => {
@@ -72,7 +72,7 @@ describe.each(adapters)('%s', (_, create) => {
 });
 
 describe('registry', () => {
-  it('未注入时回退到内置 IndexedDB（库名 eflink-word）', () => {
+  it('未注入时回退到内置 IndexedDB（库名 doculuma-word）', () => {
     setDefaultStorage(null as unknown as StorageAdapter);
     const storage = getDefaultStorage();
     // 两个不同的 IndexedDB 存储实例各自持有独立 Dexie 连接，行为等价即可

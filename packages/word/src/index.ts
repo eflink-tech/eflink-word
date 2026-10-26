@@ -1,6 +1,10 @@
 /** @eflink-tech/word 对外导出面：组件 + headless API + 存储适配器 */
 import '@eflink-tech/office-kit/styles.css';
 import './styles.css';
+import { migrateLegacyLocalStorage } from './storage/legacy';
+
+// efLink → DocuLuma：模块加载时一次性把旧命名空间的 localStorage 数据改名到新键（IndexedDB 由各存储路径按需导入）
+migrateLegacyLocalStorage();
 
 // 组件
 export { WordEditor } from './components/WordEditor';

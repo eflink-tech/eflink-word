@@ -1,4 +1,5 @@
 import { indexedDbStorage } from './indexedDb';
+import { INDEXEDDB_DEFAULT_DB_NAME } from './keys';
 import type { StorageAdapter } from './types';
 
 let adapter: StorageAdapter | null = null;
@@ -8,8 +9,8 @@ export function setDefaultStorage(next: StorageAdapter): void {
   adapter = next;
 }
 
-/** 取当前默认存储；未注入时回退到内置 IndexedDB（库名 eflink-word，与历史单体版一致）。 */
+/** 取当前默认存储；未注入时回退到内置 IndexedDB（库名 doculuma-word，旧 eflink-word 数据自动导入）。 */
 export function getDefaultStorage(): StorageAdapter {
-  adapter ??= indexedDbStorage('eflink-word');
+  adapter ??= indexedDbStorage(INDEXEDDB_DEFAULT_DB_NAME);
   return adapter;
 }

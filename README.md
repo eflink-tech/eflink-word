@@ -1,4 +1,4 @@
-# EFLink Word 易飞文档
+# DocuLuma Word
 
 参照企业微信在线文档布局的纯前端 Word 编辑器。基于 [canvas-editor](https://github.com/Hufe921/canvas-editor) 排版引擎与 React 构建，**既可以独立运行（本仓库 demo 应用），也可以作为 React 组件嵌入任意应用**（npm 包 `@eflink-tech/word`）。
 
@@ -38,7 +38,7 @@ function Page() {
 }
 ```
 
-不传 `storage` 时默认使用内置 IndexedDB 存储（库名 `eflink-word`）。组件高度跟随父容器（`height: 100%`），页面级 `html/body` 高度与字体由宿主提供。
+不传 `storage` 时默认使用内置 IndexedDB 存储（库名 `doculuma-word`，首次使用时自动导入历史旧库数据）。组件高度跟随父容器（`height: 100%`），页面级 `html/body` 高度与字体由宿主提供。
 
 ### WordEditor Props
 
@@ -130,7 +130,7 @@ eflink-word/
 │       ├── storage/    # StorageAdapter 接口与内置实现
 │       ├── store/      # zustand 状态
 │       └── index.ts    # 对外导出面
-└── apps/demo/          # 独立运行的应用（易飞文档）：路由、品牌、最近文档逻辑
+└── apps/demo/          # 独立运行的应用（DocuLuma Word）：路由、品牌、最近文档逻辑
 ```
 
 ## 开发
@@ -152,7 +152,7 @@ pnpm build        # 构建组件库与 demo
 
 ## 联系我们
 
-- **在线体验**：<https://eflink.tech>（易飞文档 · 免费在线文档编辑器）
+- **在线体验**：<https://eflink.tech>（DocuLuma Word · 免费在线文档编辑器）
 - **问题反馈与交流**：[eflink.tech/contact](https://eflink.tech/contact)
 - **邮箱**：[support@eflink.tech](mailto:support@eflink.tech)
 

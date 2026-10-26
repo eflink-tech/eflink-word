@@ -1,11 +1,13 @@
 import type { CanvasEditorData } from '../types/document';
+import { DRAFT_KEY_PREFIX } from './keys';
 
 /**
  * 本地草稿兜底：内容变化后先落 localStorage，云端保存（手动 ⌘S/Ctrl+S）成功后清除。
- * key 约定：eflink:draft:word:<docId>，宿主离页拦截可据此识别/丢弃草稿。
+ * key 约定：doculuma:draft:word:<docId>（旧 eflink:draft:word:<docId> 由 storage/legacy.ts 一次性改名），
+ * 宿主离页拦截可据此识别/丢弃草稿。
  */
 function draftKey(docId: string): string {
-  return `eflink:draft:word:${docId}`;
+  return `${DRAFT_KEY_PREFIX}${docId}`;
 }
 
 /** 写入本地草稿；失败（隐私模式/容量不足等）静默降级，不影响编辑 */

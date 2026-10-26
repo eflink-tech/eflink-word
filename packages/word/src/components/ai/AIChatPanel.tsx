@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, FileDown, History, Send, Settings, Sparkles, Trash2, Wand2, X } from 'lucide-react';
 import { useI18n } from '@eflink-tech/office-kit';
 import { useUIStore } from '../../store/uiStore';
-import { aiDb, aiSettingsStore, BUILTIN_TEMPLATES } from '../../ai/db';
+import { aiDb, aiSettingsStore, BUILTIN_TEMPLATES, ensureAiLegacyImport } from '../../ai/db';
 import { errorMessage, sendMessage, type ChatMessage } from '../../ai/aiService';
 import { buildDocPrompt, parseAIDocument } from '../../ai/systemPrompt';
 import {
@@ -61,22 +61,25 @@ export function AIChatPanel() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [messages, busy]);
 
-  // 会话持久化：消息变化时写入 Dexie
+  // 会话持久化：消息变化时写入 Dexie（先完成旧库导入，避免新数据阻塞迁移）
   useEffect(() => {
     if (!messages.length) return;
     const id = convId ?? (() => { const nid = `conv-${Date.now()}`; setConvId(nid); return nid; })();
     const now = Date.now();
-    void aiDb.conversations.put({
+    const conversation = {
       id,
       title: messages[0]?.content.replace(/\n/g, ' ').slice(0, 24) || t('word.ai.newChatTitle'),
       messages: messages.map((m) => ({ ...m, time: now })),
       createdAt: now,
       updatedAt: now,
-    });
+    };
+    void ensureAiLegacyImport().then(() => aiDb.conversations.put(conversation));
   }, [messages, convId]);
 
   const loadHistory = () => {
-    void aiDb.conversations.orderBy('updatedAt').reverse().toArray().then(setHistoryList);
+    void ensureAiLegacyImport()
+      .then(() => aiDb.conversations.orderBy('updatedAt').reverse().toArray())
+      .then(setHistoryList);
   };
 
   const openConversation = (conv: Conversation) => {
@@ -320,7 +323,7 @@ export function AIChatPanel() {
               <div className="mb-1 text-xs text-[#646a73]">{label}</div>
               <input
                 type={key === 'apiKey' ? 'password' : 'text'}
-                name={`eflink-ai-${key}`}
+                name={`doculuma-ai-${key}`}
                 autoComplete={key === 'apiKey' ? 'new-password' : 'off'}
                 // 只读直到聚焦：避免 Chrome 把「接口地址 + 密码框」识别为登录表单而自动填充保存的账号密码
                 readOnly

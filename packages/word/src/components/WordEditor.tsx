@@ -21,7 +21,7 @@ import type { WordDocument } from '../types/document';
 import type { StorageAdapter } from '../storage/types';
 import { WORD_MESSAGES } from '../i18n/messages';
 
-/** 编辑器界面语言；默认 zh-CN，与 eflink.tech 现有站点保持一致 */
+/** 编辑器界面语言；默认 zh-CN，与 DocuLuma 现有站点保持一致 */
 export type WordLocale = OfficeLocale;
 
 /** 品牌区配置：编辑器左上角的 logo 与产品名 */
@@ -35,7 +35,7 @@ export interface WordEditorProps {
   docId: string;
   /** 界面语言（zh-CN / en / es / pt-BR），默认 zh-CN */
   locale?: WordLocale;
-  /** 文档存储实现；传入后注册为全局默认。缺省用内置 IndexedDB（库名 eflink-word） */
+  /** 文档存储实现；传入后注册为全局默认。缺省用内置 IndexedDB（库名 doculuma-word） */
   storage?: StorageAdapter;
   /** 品牌区（logo + 产品名）；不传或传 false 隐藏 */
   branding?: WordEditorBrand | false;
@@ -190,7 +190,7 @@ function WordEditorInner({
 
   // 注册 window bridge：宿主可在路由跳转/离页前查询脏状态、触发保存或丢弃本地草稿
   useEffect(() => {
-    (window as unknown as Record<string, unknown>).__eflinkEditorBridge = {
+    (window as unknown as Record<string, unknown>).__doculumaEditorBridge = {
       isDirty: () => useEditorStore.getState().isDirty,
       save: () => useEditorStore.getState().save(),
       discard: () => {
@@ -200,7 +200,7 @@ function WordEditorInner({
       },
     };
     return () => {
-      delete (window as unknown as Record<string, unknown>).__eflinkEditorBridge;
+      delete (window as unknown as Record<string, unknown>).__doculumaEditorBridge;
     };
   }, []);
 

@@ -100,7 +100,7 @@ function EditorRoute({
       <WordEditor
         docId={docId}
         locale={locale}
-        branding={{ logo: '/logo.png', name: '易飞文档' }}
+        branding={{ logo: '/logo.png', name: 'DocuLuma Word' }}
         guardUnload
         onDocIdChange={(id) => navigate(`/edit/${id}?locale=${locale}`)}
       />
