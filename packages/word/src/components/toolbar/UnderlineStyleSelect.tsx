@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import type Editor from '@hufe921/canvas-editor';
 import { TextDecorationStyle } from '@hufe921/canvas-editor';
 import type { IRangeStyle } from '@hufe921/canvas-editor';
+import { useI18n } from '@eflink-tech/office-kit';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { WordCaretDown } from '../../components/icons/wordIcons';
 
@@ -14,12 +15,12 @@ interface UnderlineStyleSelectProps {
 }
 
 // canvas-editor TextDecorationStyle 枚举值与 UI 标签映射
-const UNDERLINE_STYLES: { label: string; value: TextDecorationStyle }[] = [
-  { label: '单实线', value: TextDecorationStyle.SOLID },
-  { label: '双实线', value: TextDecorationStyle.DOUBLE },
-  { label: '虚线', value: TextDecorationStyle.DASHED },
-  { label: '点线', value: TextDecorationStyle.DOTTED },
-  { label: '波浪线', value: TextDecorationStyle.WAVY },
+const UNDERLINE_STYLES: { labelKey: string; value: TextDecorationStyle }[] = [
+  { labelKey: 'word.underline.solid', value: TextDecorationStyle.SOLID },
+  { labelKey: 'word.underline.double', value: TextDecorationStyle.DOUBLE },
+  { labelKey: 'word.underline.dashed', value: TextDecorationStyle.DASHED },
+  { labelKey: 'word.underline.dotted', value: TextDecorationStyle.DOTTED },
+  { labelKey: 'word.underline.wavy', value: TextDecorationStyle.WAVY },
 ];
 
 /** canvas-editor TextDecorationStyle → CSS textDecorationStyle */
@@ -30,6 +31,7 @@ function toCSS(style: TextDecorationStyle | null): 'solid' | 'double' | 'dashed'
 
 /** 下划线线型选择下拉（无 caret 时仍显示下划线按钮旁的箭头） */
 export function UnderlineStyleSelect({ editor, currentStyle }: UnderlineStyleSelectProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -61,7 +63,7 @@ export function UnderlineStyleSelect({ editor, currentStyle }: UnderlineStyleSel
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="下划线样式"
+        title={t('word.tb.underlineStyle')}
         className="-ml-px flex h-6 w-3 items-center justify-center rounded-[2px] transition-colors hover:bg-black/[0.08]"
       >
         <WordCaretDown />
@@ -69,7 +71,7 @@ export function UnderlineStyleSelect({ editor, currentStyle }: UnderlineStyleSel
 
       {open && (
         <div className="absolute top-full left-0 z-[9999] mt-1 w-[110px] rounded-lg border border-black/[0.08] bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
-          {UNDERLINE_STYLES.map(({ label, value }) => (
+          {UNDERLINE_STYLES.map(({ labelKey, value }) => (
             <button
               key={value}
               type="button"
@@ -78,7 +80,7 @@ export function UnderlineStyleSelect({ editor, currentStyle }: UnderlineStyleSel
                 value === currentStyle ? 'bg-[#f2f3f4] text-[#1f2329]' : 'text-[#454D5A]'
               }`}
             >
-              <span>{label}</span>
+              <span>{t(labelKey)}</span>
               {renderLine(value)}
             </button>
           ))}

@@ -1,9 +1,10 @@
 /** @eflink-tech/word 对外导出面：组件 + headless API + 存储适配器 */
+import '@eflink-tech/office-kit/styles.css';
 import './styles.css';
 
 // 组件
 export { WordEditor } from './components/WordEditor';
-export type { WordEditorProps, WordEditorBrand } from './components/WordEditor';
+export type { WordEditorProps, WordEditorBrand, WordLocale } from './components/WordEditor';
 
 // 存储适配器
 export type { StorageAdapter } from './storage/types';

@@ -45,7 +45,6 @@ vi.mock('../InsertDropdown', () => ({
   InsertImageButton: () => null,
 }));
 vi.mock('../ColorPicker', () => ({ ColorPicker: () => null }));
-vi.mock('../ToolbarMenu', () => ({ ToolbarMenu: () => null }));
 vi.mock('../ParagraphSettingsModal', () => ({ ParagraphSettingsModal: () => null }));
 vi.mock('../toolbarOverflow', () => ({
   computeOverflowBuckets: () => ({ hiddenKeys: new Set<string>(), buckets: [] }),

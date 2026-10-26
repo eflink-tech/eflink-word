@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import type Editor from '@hufe921/canvas-editor';
+import { useI18n } from '@eflink-tech/office-kit';
 import type { ICatalogItem } from '@hufe921/canvas-editor';
 import { TitleLevel } from '@hufe921/canvas-editor';
 import { useDocumentStore } from '../../store/documentStore';
@@ -53,6 +54,7 @@ function findActiveItem(
 }
 
 export function CatalogPanel({ editor, onClose }: CatalogPanelProps) {
+  const { t } = useI18n();
   const docTitle = useDocumentStore((st) => st.currentDocument?.title ?? '');
   const [items, setItems] = useState<ICatalogItem[]>([]);
   const [visiblePageNo, setVisiblePageNo] = useState<number>(1);
@@ -136,7 +138,7 @@ export function CatalogPanel({ editor, onClose }: CatalogPanelProps) {
             {hasChildren ? (
               <button
                 type="button"
-                title={isCollapsed ? '展开' : '折叠'}
+                title={isCollapsed ? t('word.catalog.expand') : t('word.catalog.collapse')}
                 aria-expanded={!isCollapsed}
                 onClick={() => toggleCollapse(item.id)}
                 className="mr-0.5 flex h-4 w-3.5 shrink-0 items-center justify-center"
@@ -179,13 +181,13 @@ export function CatalogPanel({ editor, onClose }: CatalogPanelProps) {
     <div className="no-print flex h-full flex-col bg-[#f5f6f7] pl-[15px]">
       {/* 面板头：目录 + 浮层关闭按钮 */}
       <div className="flex h-9 shrink-0 items-center justify-between pl-2.5 pr-1.5">
-        <span className="text-[13px] font-bold text-[#1f2329]">目录</span>
+        <span className="text-[13px] font-bold text-[#1f2329]">{t('word.catalog.title')}</span>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            title="收起目录"
-            aria-label="收起目录"
+            title={t('word.catalog.close')}
+            aria-label={t('word.catalog.close')}
             className="flex h-6 w-6 items-center justify-center rounded-[2px] text-[#51565f] transition-colors hover:bg-black/[0.08]"
           >
             <X size={14} />
@@ -204,7 +206,7 @@ export function CatalogPanel({ editor, onClose }: CatalogPanelProps) {
         )}
         {items.length === 0 ? (
           <p className="px-2.5 text-[12px] leading-[17px] text-[#767c85]">
-            暂无标题，可通过工具栏"正文"下拉将段落设为标题
+            {t('word.catalog.empty')}
           </p>
         ) : (
           <ul className="pr-1.5">{renderItems(items, 0)}</ul>

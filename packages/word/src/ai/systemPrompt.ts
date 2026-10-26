@@ -1,11 +1,13 @@
 // AI 提示词与结果解析：约定输出结构化 JSON，由 actionExecutor 落为 canvas-editor 元素
+import type { OfficeLocale } from '@eflink-tech/office-kit';
 import type { AIDocElement, AIDocument } from './types';
 
 const ELEMENT_TYPES = new Set(['title', 'paragraph', 'list', 'table']);
 const MAX_ELEMENTS = 300;
 const MAX_TEXT_LENGTH = 5000;
 
-export const DOC_SCHEMA_PROMPT = `输出 JSON（不要输出 JSON 之外的任何文字），结构如下：
+export const DOC_SCHEMA_PROMPTS: Record<OfficeLocale, string> = {
+  'zh-CN': `输出 JSON（不要输出 JSON 之外的任何文字），结构如下：
 {
   "title": "文档标题",
   "elements": [
@@ -15,12 +17,61 @@ export const DOC_SCHEMA_PROMPT = `输出 JSON（不要输出 JSON 之外的任�
     { "type": "table", "header": ["列一", "列二"], "rows": [["内容", "内容"]] }
   ]
 }
-约定：level 取 1-6 对应一至六级标题；正文一律用 paragraph（一段一个元素，不要用 \\n 换行）；并列内容用 list；表格首行为表头；不要输出 markdown 代码块。`;
+约定：level 取 1-6 对应一至六级标题；正文一律用 paragraph（一段一个元素，不要用 \\n 换行）；并列内容用 list；表格首行为表头；不要输出 markdown 代码块。`,
+  en: `Output JSON only, with no text outside the JSON, in this structure:
+{
+  "title": "Document title",
+  "elements": [
+    { "type": "title", "level": 1, "text": "Level 1 heading" },
+    { "type": "paragraph", "text": "Body paragraph…" },
+    { "type": "list", "ordered": false, "items": ["Item one", "Item two"] },
+    { "type": "table", "header": ["Column 1", "Column 2"], "rows": [["Cell", "Cell"]] }
+  ]
+}
+Rules: level is 1-6 for heading levels; use paragraph for body text (one element per paragraph, no \\n line breaks); use list for parallel items; the first table row is the header; do not output markdown code fences.`,
+  es: `Genera solo JSON, sin texto fuera del JSON, con esta estructura:
+{
+  "title": "Título del documento",
+  "elements": [
+    { "type": "title", "level": 1, "text": "Título de nivel 1" },
+    { "type": "paragraph", "text": "Párrafo del cuerpo…" },
+    { "type": "list", "ordered": false, "items": ["Elemento uno", "Elemento dos"] },
+    { "type": "table", "header": ["Columna 1", "Columna 2"], "rows": [["Celda", "Celda"]] }
+  ]
+}
+Reglas: level va de 1 a 6 según el nivel del título; usa paragraph para el cuerpo (un elemento por párrafo, sin saltos \\n); usa list para elementos paralelos; la primera fila de la tabla es el encabezado; no incluyas bloques de código markdown.`,
+  'pt-BR': `Gere apenas JSON, sem texto fora do JSON, nesta estrutura:
+{
+  "title": "Título do documento",
+  "elements": [
+    { "type": "title", "level": 1, "text": "Título de nível 1" },
+    { "type": "paragraph", "text": "Parágrafo do corpo…" },
+    { "type": "list", "ordered": false, "items": ["Item um", "Item dois"] },
+    { "type": "table", "header": ["Coluna 1", "Coluna 2"], "rows": [["Célula", "Célula"]] }
+  ]
+}
+Regras: level vai de 1 a 6 conforme o nível do título; use paragraph para o corpo (um elemento por parágrafo, sem quebras \\n); use list para itens paralelos; a primeira linha da tabela é o cabeçalho; não inclua blocos de código markdown.`,
+};
+
+export const DOC_SCHEMA_PROMPT = DOC_SCHEMA_PROMPTS['zh-CN'];
 
 /** 生成整篇文档的提示词 */
-export function buildDocPrompt(topic: string, requirements: string): string {
+export function buildDocPrompt(
+  topic: string,
+  requirements: string,
+  locale: OfficeLocale = 'zh-CN',
+): string {
+  if (locale === 'en') {
+    return `Write a complete, well-structured document about “${topic}” (with a title, headings, body paragraphs, and lists or tables where useful).\n${requirements ? `Requirements: ${requirements}\n` : ''}${DOC_SCHEMA_PROMPTS.en}`;
+  }
+  if (locale === 'es') {
+    return `Escribe un documento completo y bien estructurado sobre «${topic}» (con título, encabezados, párrafos y listas o tablas cuando convenga).\n${requirements ? `Requisitos: ${requirements}\n` : ''}${DOC_SCHEMA_PROMPTS.es}`;
+  }
+  if (locale === 'pt-BR') {
+    return `Escreva um documento completo e bem estruturado sobre “${topic}” (com título, subtítulos, parágrafos e listas ou tabelas quando fizer sentido).\n${requirements ? `Requisitos: ${requirements}\n` : ''}${DOC_SCHEMA_PROMPTS['pt-BR']}`;
+  }
   return `请围绕主题「${topic}」撰写一篇结构完整的文档（含标题、各级小标题、正文段落，适当使用列表或表格）。
-${requirements ? `要求：${requirements}\n` : ''}${DOC_SCHEMA_PROMPT}`;
+${requirements ? `要求：${requirements}\n` : ''}${DOC_SCHEMA_PROMPTS['zh-CN']}`;
 }
 
 /** 对选中/全文做写作辅助的提示词（结果为纯文本，逐段返回） */

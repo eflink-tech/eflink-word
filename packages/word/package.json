@@ -33,6 +33,7 @@
     "react-dom": ">=18.0.0"
   },
   "dependencies": {
+    "@eflink-tech/office-kit": "workspace:*",
     "@hufe921/canvas-editor": "^1.0.2",
     "color": "^5.0.3",
     "dexie": "^4.0.0",

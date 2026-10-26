@@ -55,8 +55,30 @@ importers:
         specifier: ^8.2.2
         version: 8.2.2(@types/node@24.13.3)(jiti@2.7.0)
 
+  packages/office-kit:
+    dependencies:
+      react:
+        specifier: '>=18.0.0'
+        version: 19.2.8
+      react-dom:
+        specifier: '>=18.0.0'
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.2.4
+        version: 19.2.7(@types/react@19.2.18)
+      typescript:
+        specifier: ~6.0.2
+        version: 6.0.3
+
   packages/word:
     dependencies:
+      '@eflink-tech/office-kit':
+        specifier: workspace:*
+        version: link:../office-kit
       '@hufe921/canvas-editor':
         specifier: ^1.0.2
         version: 1.0.2

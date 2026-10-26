@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useI18n } from '@eflink-tech/office-kit';
+
 function isValidHttpUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -27,6 +29,7 @@ export function LinkDialog({
   onUnset,
   showUnset = false,
 }: LinkDialogProps) {
+  const { t } = useI18n();
   const [text, setText] = useState(initialText);
   const [url, setUrl] = useState(initialUrl);
   const [urlError, setUrlError] = useState(false);
@@ -71,20 +74,20 @@ export function LinkDialog({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="链接"
+        aria-label={t('word.link.title')}
         className="w-[320px] rounded-md border border-[#e7e9eb] bg-white p-4 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 text-[14px] font-medium text-[#1f2329]">链接</div>
+        <div className="mb-3 text-[14px] font-medium text-[#1f2329]">{t('word.link.title')}</div>
 
         <label className="mb-3 block">
-          <span className="mb-1 block text-[12px] text-[#8f959e]">显示文本</span>
+          <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.link.text')}</span>
           <input
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
             className="w-full rounded border border-[#e7e9eb] px-2 py-1.5 text-[13px] text-[#1f2329] outline-none focus:border-[#3370ff]"
-            placeholder="可选"
+            placeholder={t('word.link.optional')}
           />
         </label>
 
@@ -103,7 +106,7 @@ export function LinkDialog({
           />
           {urlError && (
             <span className="mt-1 block text-[12px] text-[#d93025]">
-              请输入有效的 http/https URL
+              {t('word.link.invalid')}
             </span>
           )}
         </label>
@@ -118,7 +121,7 @@ export function LinkDialog({
               }}
               className="mr-auto rounded px-3 py-1.5 text-[13px] text-[#d93025] hover:bg-[#fde8e8]"
             >
-              取消链接
+              {t('word.insert.removeLink')}
             </button>
           )}
           <button
@@ -126,14 +129,14 @@ export function LinkDialog({
             onClick={onClose}
             className="rounded px-3 py-1.5 text-[13px] text-[#41464f] hover:bg-[#f2f3f4]"
           >
-            取消
+            {t('action.cancel')}
           </button>
           <button
             type="button"
             onClick={handleSubmit}
             className="rounded bg-[#3370ff] px-3 py-1.5 text-[13px] text-white hover:bg-[#2860e1]"
           >
-            确定
+            {t('action.confirm')}
           </button>
         </div>
       </div>

@@ -11,6 +11,7 @@ export interface CreateEditorOptions {
   defaultFont: string;
   defaultSize: number;
   watermark?: string;
+  placeholder?: string;
   /** CSS 选择器，指向实际滚动容器（canvas-editor 用它监听滚动和 IntersectionObserver 视口） */
   scrollContainerSelector?: string;
 }
@@ -37,7 +38,7 @@ export function createEditor(opts: CreateEditorOptions): Editor {
     paperDirection: opts.paperDirection,
     defaultFont: opts.defaultFont,
     defaultSize: opts.defaultSize,
-    placeholder: { data: '请输入正文' },
+    placeholder: { data: opts.placeholder ?? '请输入正文' },
     ...(opts.watermark ? { watermark: { data: opts.watermark } } : {}),
     ...(opts.scrollContainerSelector ? { scrollContainerSelector: opts.scrollContainerSelector } : {}),
   };

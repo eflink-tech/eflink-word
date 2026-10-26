@@ -4,6 +4,7 @@ import type { IEditorData } from '@hufe921/canvas-editor';
 import { useEditorStore } from '../../store/editorStore';
 import { useDocumentStore } from '../../store/documentStore';
 import { useUIStore } from '../../store/uiStore';
+import { useI18n } from '@eflink-tech/office-kit';
 import { createEditor, destroyEditor } from '../../core/canvas-editor/editor-instance';
 import { mountPasteHandler } from '../../core/canvas-editor/paste-handler';
 import { mountEventBridge, type EventBridgeHandle } from '../../core/canvas-editor/event-bridge';
@@ -28,6 +29,7 @@ const EMPTY_DOC_DATA: IEditorData = {
 };
 
 export function Editor({ className = '', style }: EditorProps) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<ReturnType<typeof createEditor> | null>(null);
   const bridgeRef = useRef<EventBridgeHandle | null>(null);
@@ -106,6 +108,7 @@ export function Editor({ className = '', style }: EditorProps) {
       defaultFont,
       defaultSize,
       watermark: watermarkRef.current ?? undefined,
+      placeholder: t('word.editor.placeholder'),
       scrollContainerSelector: '.print-root',
     });
 

@@ -9,6 +9,7 @@ import type Editor from '@hufe921/canvas-editor';
 import type { RowFlex } from '@hufe921/canvas-editor';
 import { ListType, ListStyle } from '@hufe921/canvas-editor';
 import { Sparkles } from 'lucide-react';
+import { useI18n } from '@eflink-tech/office-kit';
 import { computeOverflowBuckets, type OverflowBucket } from './toolbarOverflow';
 import { FontFamilySelect } from './FontFamilySelect';
 import { FontSizeSelect } from './FontSizeSelect';
@@ -21,9 +22,7 @@ import { ColorPicker } from './ColorPicker';
 import { WordIconButton, ToolbarDivider } from './ToolButton';
 import { useFormatPainter } from '../../hooks/useFormatPainter';
 import { useEditorStore } from '../../store/editorStore';
-import { useUIStore } from '../../store/uiStore';
-import { ToolbarMenu } from './ToolbarMenu';
-import {
+import { useUIStore } from '../../store/uiStore';import {
   WordUndoIcon,
   WordRedoIcon,
   WordFormatPaintIcon,
@@ -69,7 +68,15 @@ function Placeholder({
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
 }) {
-  return <WordIconButton icon={icon} label={`${label}（开发中）`} onClick={() => {}} disabled />;
+  const { t } = useI18n();
+  return (
+    <WordIconButton
+      icon={icon}
+      label={`${label}${t('word.tb.comingSoon')}`}
+      onClick={() => {}}
+      disabled
+    />
+  );
 }
 
 /**
@@ -120,13 +127,14 @@ function OverflowMoreButton({
   open: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <button
       type="button"
       data-overflow-ui=""
       onClick={onToggle}
-      title="更多"
-      aria-label="更多"
+      title={t('shell.more')}
+      aria-label={t('shell.more')}
       aria-expanded={open}
       className={`mx-px flex h-6 w-6 shrink-0 items-center justify-center rounded-[2px] transition-colors ${
         open ? 'bg-black/[0.08]' : 'hover:bg-black/[0.08]'
@@ -138,6 +146,7 @@ function OverflowMoreButton({
 }
 
 export function Toolbar({ editor }: ToolbarProps) {
+  const { t } = useI18n();
   const { rangeStyle } = useEditorStore();
   const aiPanelOpen = useUIStore((s) => s.aiPanelOpen);
 
@@ -159,9 +168,7 @@ export function Toolbar({ editor }: ToolbarProps) {
   const inTask = listType === ListType.UL && listStyle === ListStyle.CHECKBOX;
 
   const painterTitle =
-    painterMode !== 'off'
-      ? '格式刷(使用中，Esc 退出)'
-      : '格式刷(双击可连续使用)';
+    painterMode !== 'off' ? t('word.tb.formatPaintActive') : t('word.tb.formatPaintHint');
 
   const containerRef = useRef<HTMLDivElement>(null);
   const slotEls = useRef(new Map<string, HTMLDivElement>());
@@ -263,8 +270,6 @@ export function Toolbar({ editor }: ToolbarProps) {
   };
 
   const groups: Slot[][] = [
-    // 文件菜单（不折叠）
-    [{ key: 'file-menu', node: <ToolbarMenu editor={editor} /> }],
     // 撤销/重做/格式刷/清除格式
     [
       {
@@ -273,7 +278,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordUndoIcon}
-            label="撤销"
+            label={t('action.undo')}
             disabled={!rangeStyle?.undo}
             onClick={() => editor?.command.executeUndo()}
           />
@@ -285,7 +290,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordRedoIcon}
-            label="重做"
+            label={t('action.redo')}
             disabled={!rangeStyle?.redo}
             onClick={() => editor?.command.executeRedo()}
           />
@@ -311,7 +316,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordClearFormatIcon}
-            label="清除格式"
+            label={t('action.clearFormat')}
             // canvas-editor executeFormat 清除当前选区的所有内联样式
             onClick={() => editor?.command.executeFormat()}
           />
@@ -360,7 +365,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordFontIncreaseIcon}
-            label="增大字号"
+            label={t('word.tb.fontIncrease')}
             onClick={() => editor?.command.executeSizeAdd()}
           />
         ),
@@ -371,7 +376,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordFontDecreaseIcon}
-            label="减小字号"
+            label={t('word.tb.fontDecrease')}
             onClick={() => editor?.command.executeSizeMinus()}
           />
         ),
@@ -385,7 +390,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordBoldIcon}
-            label="加粗"
+            label={t('word.tb.bold')}
             onClick={() => editor?.command.executeBold()}
             active={rangeStyle?.bold ?? false}
           />
@@ -397,7 +402,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordItalicIcon}
-            label="倾斜"
+            label={t('word.tb.italic')}
             onClick={() => editor?.command.executeItalic()}
             active={rangeStyle?.italic ?? false}
           />
@@ -410,7 +415,7 @@ export function Toolbar({ editor }: ToolbarProps) {
           <div className="flex shrink-0 items-center">
             <WordIconButton
               icon={WordUnderlineIcon}
-              label="下划线"
+              label={t('word.tb.underline')}
               onClick={() => editor?.command.executeUnderline()}
               active={rangeStyle?.underline ?? false}
             />
@@ -427,7 +432,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordStrikeIcon}
-            label="删除线"
+            label={t('word.tb.strike')}
             onClick={() => editor?.command.executeStrikeout()}
             active={rangeStyle?.strikeout ?? false}
           />
@@ -461,7 +466,7 @@ export function Toolbar({ editor }: ToolbarProps) {
           />
         ),
       },
-      { key: 'font-settings', collapsible: true, node: <Placeholder icon={WordFontSettingsIcon} label="字体设置" /> },
+      { key: 'font-settings', collapsible: true, node: <Placeholder icon={WordFontSettingsIcon} label={t('word.tb.fontSettings')} /> },
     ],
     // 列表 / 缩进 / 对齐 / 上下标·字符 / 行距 / 引用 / 高亮块 / 段落设置
     [
@@ -471,7 +476,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordBulletListIcon}
-            label="项目符号"
+            label={t('word.tb.bulletList')}
             onClick={() => toggleList('bullet')}
             active={inBullet}
           />
@@ -483,7 +488,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordNumberedListIcon}
-            label="数字编号"
+            label={t('word.tb.numberedList')}
             onClick={() => toggleList('ordered')}
             active={inOrdered}
           />
@@ -495,14 +500,14 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordTaskListIcon}
-            label="待办事项"
+            label={t('word.tb.taskList')}
             onClick={() => toggleList('task')}
             active={inTask}
           />
         ),
       },
-      { key: 'indent-decrease', collapsible: true, node: <Placeholder icon={WordIndentDecreaseIcon} label="减少缩进" /> },
-      { key: 'indent-increase', collapsible: true, node: <Placeholder icon={WordIndentIncreaseIcon} label="增加缩进" /> },
+      { key: 'indent-decrease', collapsible: true, node: <Placeholder icon={WordIndentDecreaseIcon} label={t('word.tb.indentDecrease')} /> },
+      { key: 'indent-increase', collapsible: true, node: <Placeholder icon={WordIndentIncreaseIcon} label={t('word.tb.indentIncrease')} /> },
       {
         key: 'align',
         collapsible: true,
@@ -519,7 +524,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordSubIcon}
-            label="下标"
+            label={t('word.tb.subscript')}
             onClick={() => editor?.command.executeSubscript()}
             active={rangeStyle?.type === 'subscript'}
           />
@@ -531,15 +536,15 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordSupIcon}
-            label="上标"
+            label={t('word.tb.superscript')}
             onClick={() => editor?.command.executeSuperscript()}
             active={rangeStyle?.type === 'superscript'}
           />
         ),
       },
-      { key: 'phonetic', collapsible: true, node: <Placeholder icon={WordPhoneticIcon} label="拼音指南" /> },
-      { key: 'font-scaling', collapsible: true, node: <Placeholder icon={WordFontScalingIcon} label="字符缩放" /> },
-      { key: 'letter-spacing', collapsible: true, node: <Placeholder icon={WordLetterSpacingIcon} label="字符间距" /> },
+      { key: 'phonetic', collapsible: true, node: <Placeholder icon={WordPhoneticIcon} label={t('word.tb.phonetic')} /> },
+      { key: 'font-scaling', collapsible: true, node: <Placeholder icon={WordFontScalingIcon} label={t('word.tb.fontScaling')} /> },
+      { key: 'letter-spacing', collapsible: true, node: <Placeholder icon={WordLetterSpacingIcon} label={t('word.tb.letterSpacing')} /> },
       {
         key: 'line-height',
         collapsible: true,
@@ -557,7 +562,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={WordQuoteIcon}
-            label="引用"
+            label={t('word.tb.quote')}
             // canvas-editor 无 blockquote API（spec 偏差）→ 点击不触发任何操作
             onClick={() => {
               /* noop */
@@ -567,7 +572,7 @@ export function Toolbar({ editor }: ToolbarProps) {
           />
         ),
       },
-      { key: 'highlight-block', collapsible: true, node: <Placeholder icon={WordHighlightBlockIcon} label="高亮块" /> },
+      { key: 'highlight-block', collapsible: true, node: <Placeholder icon={WordHighlightBlockIcon} label={t('word.tb.highlightBlock')} /> },
     ],
     // AI 助手（collapsible: false 保证窄屏下也不折叠进「更多」）
     [
@@ -577,7 +582,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <WordIconButton
             icon={Sparkles}
-            label="AI 助手"
+            label={t('word.tb.aiAssistant')}
             onClick={() => useUIStore.getState().toggleAIPanel()}
             active={aiPanelOpen}
           />

@@ -19,18 +19,19 @@ import {
   Pencil,
   Calendar,
 } from 'lucide-react';
+import { useI18n } from '@eflink-tech/office-kit';
 import type Editor from '@hufe921/canvas-editor';
 import { useUIStore } from '../../store/uiStore';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { formatDateInsert, type DateInsertFormat } from '../../core/utils/dateInsert';
 /** 6 种分割线样式（对齐旧系统 data-separator 值） */
-const HR_SEPARATORS: { label: string; value: string }[] = [
-  { label: '实线', value: '0,0' },
-  { label: '虚线', value: '1,1' },
-  { label: '粗虚线', value: '3,1' },
-  { label: '点线', value: '4,4' },
-  { label: '双实线', value: '7,3,3,3' },
-  { label: '粗实线', value: '6,2,2,2,2,2' },
+const HR_SEPARATORS: { labelKey: string; value: string }[] = [
+  { labelKey: 'word.insert.hrSolid', value: '0,0' },
+  { labelKey: 'word.insert.hrDashed', value: '1,1' },
+  { labelKey: 'word.insert.hrThickDashed', value: '3,1' },
+  { labelKey: 'word.insert.hrDotted', value: '4,4' },
+  { labelKey: 'word.insert.hrDouble', value: '7,3,3,3' },
+  { labelKey: 'word.insert.hrThick', value: '6,2,2,2,2,2' },
 ];
 import { WordInsertIcon, WordImageIcon, WordCaretDown } from '../../components/icons/wordIcons';
 import { useImageInsert, useLinkDialog } from './useInsertActions';
@@ -42,18 +43,19 @@ interface EditorRefProps {
 
 /** 图片直插按钮（对齐微信文档"图片"按钮，点击直接打开本地文件选择） */
 export function InsertImageButton({ editor }: EditorRefProps) {
+  const { t } = useI18n();
   const { open, input } = useImageInsert(editor);
   return (
     <>
       <button
         type="button"
         onClick={open}
-        title="图片"
-        aria-label="图片"
+        title={t('word.insert.image')}
+        aria-label={t('word.insert.image')}
         className="mx-px flex h-6 shrink-0 items-center gap-px rounded-[2px] px-0.5 transition-colors hover:bg-black/[0.08]"
       >
         <WordImageIcon className="h-[18px] w-[18px] shrink-0" />
-        <span className="cursor-default whitespace-nowrap text-xs leading-4 text-[#454D5A]">图片</span>
+        <span className="cursor-default whitespace-nowrap text-xs leading-4 text-[#454D5A]">{t('word.insert.image')}</span>
       </button>
       {input}
     </>
@@ -128,6 +130,7 @@ function parseDashArray(s: string): number[] {
 }
 
 export function InsertDropdown({ editor }: EditorRefProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [watermarkOpen, setWatermarkOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -218,36 +221,36 @@ export function InsertDropdown({ editor }: EditorRefProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="插入"
-        aria-label="插入"
+        title={t('word.insert.menu')}
+        aria-label={t('word.insert.menu')}
         className="mx-px flex h-6 shrink-0 items-center gap-px rounded-[2px] px-0.5 transition-colors hover:bg-black/[0.08]"
       >
         <WordInsertIcon className="h-[18px] w-[18px] shrink-0" />
-        <span className="cursor-default whitespace-nowrap text-xs leading-4 text-[#454D5A]">插入</span>
+        <span className="cursor-default whitespace-nowrap text-xs leading-4 text-[#454D5A]">{t('word.insert.menu')}</span>
         <WordCaretDown className="shrink-0" />
       </button>
 
       {open && (
         <div className="absolute top-full left-0 z-[9999] mt-1 w-[168px] rounded-md border border-[#e7e9eb] bg-white py-1 shadow-lg">
-          <MenuItem icon={Table} label="表格" onClick={insertTable} />
+          <MenuItem icon={Table} label={t('word.insert.table')} onClick={insertTable} />
           {inTable && (
             <>
-              <MenuItem icon={ArrowUp} label="在上方插入行" onClick={() => editor?.command.executeInsertTableTopRow()} />
-              <MenuItem icon={ArrowDown} label="在下方插入行" onClick={() => editor?.command.executeInsertTableBottomRow()} />
-              <MenuItem icon={Trash2} label="删除行" onClick={() => editor?.command.executeDeleteTableRow()} />
-              <MenuItem icon={ArrowLeft} label="在左侧插入列" onClick={() => editor?.command.executeInsertTableLeftCol()} />
-              <MenuItem icon={ArrowRight} label="在右侧插入列" onClick={() => editor?.command.executeInsertTableRightCol()} />
-              <MenuItem icon={Trash2} label="删除列" onClick={() => editor?.command.executeDeleteTableCol()} />
+              <MenuItem icon={ArrowUp} label={t('word.insert.rowAbove')} onClick={() => editor?.command.executeInsertTableTopRow()} />
+              <MenuItem icon={ArrowDown} label={t('word.insert.rowBelow')} onClick={() => editor?.command.executeInsertTableBottomRow()} />
+              <MenuItem icon={Trash2} label={t('word.insert.rowDelete')} onClick={() => editor?.command.executeDeleteTableRow()} />
+              <MenuItem icon={ArrowLeft} label={t('word.insert.colLeft')} onClick={() => editor?.command.executeInsertTableLeftCol()} />
+              <MenuItem icon={ArrowRight} label={t('word.insert.colRight')} onClick={() => editor?.command.executeInsertTableRightCol()} />
+              <MenuItem icon={Trash2} label={t('word.insert.colDelete')} onClick={() => editor?.command.executeDeleteTableCol()} />
             </>
           )}
-          <MenuItem icon={ImagePlus} label="图片（本地上传）" onClick={insertImage} />
-          <MenuItem icon={Link} label="链接" onClick={openLinkDialog} />
+          <MenuItem icon={ImagePlus} label={t('word.insert.imageUpload')} onClick={insertImage} />
+          <MenuItem icon={Link} label={t('word.insert.link')} onClick={openLinkDialog} />
           {inLink && (
             <>
-              <MenuItem icon={Pencil} label="编辑链接" onClick={linkDialog.openEdit} />
+              <MenuItem icon={Pencil} label={t('word.insert.editLink')} onClick={linkDialog.openEdit} />
               <MenuItem
                 icon={Link2Off}
-                label="取消链接"
+                label={t('word.insert.removeLink')}
                 onClick={() => {
                   editor?.command.executeCancelHyperlink();
                   setOpen(false);
@@ -255,20 +258,20 @@ export function InsertDropdown({ editor }: EditorRefProps) {
               />
             </>
           )}
-          <SubMenuItem icon={Calendar} label="日期">
+          <SubMenuItem icon={Calendar} label={t('word.insert.date')}>
             <MenuItem label="yyyy-MM-dd" onClick={() => insertDate('date')} />
             <MenuItem label="yyyy-MM-dd HH:mm:ss" onClick={() => insertDate('datetime')} />
           </SubMenuItem>
-          <SubMenuItem icon={Minus} label="分割线">
-            {HR_SEPARATORS.map(({ label, value }) => (
-              <MenuItem key={value} label={label} onClick={() => insertDivider(value)} />
+          <SubMenuItem icon={Minus} label={t('word.insert.separator')}>
+            {HR_SEPARATORS.map(({ labelKey, value }) => (
+              <MenuItem key={value} label={t(labelKey)} onClick={() => insertDivider(value)} />
             ))}
           </SubMenuItem>
           {/* canvas-editor 无原生代码块，禁用占位（spec 偏差） */}
-          <MenuItem icon={Code} label="代码块" onClick={insertCodeBlock} disabled />
-          <MenuItem icon={SplitSquareHorizontal} label="分页符" onClick={insertPageBreak} />
-          <MenuItem icon={Droplet} label={watermark ? '修改水印' : '添加水印'} onClick={openWatermark} />
-          {watermark && <MenuItem icon={Droplet} label="删除水印" onClick={handleWatermarkRemove} />}
+          <MenuItem icon={Code} label={t('word.insert.codeBlock')} onClick={insertCodeBlock} disabled />
+          <MenuItem icon={SplitSquareHorizontal} label={t('word.insert.pageBreak')} onClick={insertPageBreak} />
+          <MenuItem icon={Droplet} label={watermark ? t('word.insert.watermarkEdit') : t('word.insert.watermarkAdd')} onClick={openWatermark} />
+          {watermark && <MenuItem icon={Droplet} label={t('word.insert.watermarkRemove')} onClick={handleWatermarkRemove} />}
         </div>
       )}
 

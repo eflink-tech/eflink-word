@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronUp, ChevronDown, X } from 'lucide-react';
 import type Editor from '@hufe921/canvas-editor';
+import { useI18n } from '@eflink-tech/office-kit';
 
 interface SearchPanelProps {
   editor: Editor | null;
@@ -9,6 +10,7 @@ interface SearchPanelProps {
 
 /** 查找替换面板（基于 canvas-editor 搜索 API） */
 export function SearchPanel({ editor, onClose }: SearchPanelProps) {
+  const { t } = useI18n();
   const [searchTerm, setSearchTerm] = useState('');
   const [replaceTerm, setReplaceTerm] = useState('');
   const [resultText, setResultText] = useState('');
@@ -36,11 +38,11 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
     if (!editor) return;
     const info = editor.command.getSearchNavigateInfo();
     if (!info || info.count === 0) {
-      setResultText(term ? '无结果' : '');
+      setResultText(term ? t('word.search.noResult') : '');
     } else if (info.index > 0) {
       setResultText(`${info.index}/${info.count}`);
     } else {
-      setResultText(`${info.count} 处`);
+      setResultText(t('word.search.count', { count: info.count }));
     }
   };
 
@@ -97,12 +99,12 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
       }}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-700">查找与替换</span>
+        <span className="text-sm font-medium text-slate-700">{t('word.search.title')}</span>
         <button
           type="button"
           onClick={handleClose}
           className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-          title="关闭"
+          title={t('action.close')}
         >
           <X size={14} />
         </button>
@@ -118,7 +120,7 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
               handleNavigateNext();
             }
           }}
-          placeholder="查找内容"
+          placeholder={t('word.search.placeholder')}
           autoFocus
           className={inputClass}
         />
@@ -127,7 +129,7 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
           type="button"
           onClick={handleNavigatePrev}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-slate-500 hover:bg-slate-100"
-          title="上一个"
+          title={t('word.search.prev')}
         >
           <ChevronUp size={15} />
         </button>
@@ -135,7 +137,7 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
           type="button"
           onClick={handleNavigateNext}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-slate-500 hover:bg-slate-100"
-          title="下一个"
+          title={t('word.search.next')}
         >
           <ChevronDown size={15} />
         </button>
@@ -151,7 +153,7 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
               handleReplace();
             }
           }}
-          placeholder="替换为"
+          placeholder={t('word.search.replacePlaceholder')}
           className={inputClass}
         />
       </div>
@@ -163,7 +165,7 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
           disabled={!searchTerm}
           className="rounded border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:border-blue-400 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          替换
+          {t('word.search.replace')}
         </button>
         <button
           type="button"
@@ -171,7 +173,7 @@ export function SearchPanel({ editor, onClose }: SearchPanelProps) {
           disabled={!searchTerm}
           className="rounded bg-blue-500 px-3 py-1 text-xs text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          全部替换
+          {t('word.search.replaceAll')}
         </button>
       </div>
     </div>

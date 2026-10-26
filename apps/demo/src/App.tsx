@@ -1,12 +1,60 @@
 import { useEffect, useRef, useState } from 'react';
 import { Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { WordEditor, useDocumentStore } from '@eflink-tech/word';
+import { WordEditor, useDocumentStore, type WordLocale } from '@eflink-tech/word';
+
+const LOCALES: { value: WordLocale; label: string }[] = [
+  { value: 'zh-CN', label: '中文' },
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Español' },
+  { value: 'pt-BR', label: 'Português' },
+];
+
+const UNTITLED: Record<WordLocale, string> = {
+  'zh-CN': '未命名文档',
+  en: 'Untitled document',
+  es: 'Documento sin título',
+  'pt-BR': 'Documento sem título',
+};
+
+function readLocale(): WordLocale {
+  const value = new URLSearchParams(window.location.search).get('locale');
+  return LOCALES.find((item) => item.value === value)?.value ?? 'zh-CN';
+}
+
+function LanguageSwitcher({
+  locale,
+  onChange,
+}: {
+  locale: WordLocale;
+  onChange: (locale: WordLocale) => void;
+}) {
+  return (
+    <select
+      value={locale}
+      onChange={(e) => onChange(e.target.value as WordLocale)}
+      aria-label="Language"
+      className="fixed bottom-9 right-3 z-[100000] rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-[#1f2329] shadow-md outline-none"
+    >
+      {LOCALES.map((item) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 /**
  * /edit/:id 路由 → 解析目标文档后渲染 WordEditor。
  * 路由是独立应用（demo）的职责：库组件只接收 docId，不感知 URL。
  */
-function EditorRoute() {
+function EditorRoute({
+  locale,
+  onLocaleChange,
+}: {
+  locale: WordLocale;
+  onLocaleChange: (locale: WordLocale) => void;
+}) {
   const { id: routeDocId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [docId, setDocId] = useState<string | null>(null);
@@ -27,38 +75,60 @@ function EditorRoute() {
         return;
       }
       // 路由文档不存在（如已删除）或本地还没有文档：新建一篇并进入
-      const newId = await createDocument('未命名文档');
+      const newId = await createDocument(UNTITLED[locale]);
       setDocId(newId);
-      navigate(`/edit/${newId}`, { replace: true });
+      navigate(`/edit/${newId}?locale=${locale}`, { replace: true });
     })();
-  }, [routeDocId, navigate]);
+  }, [routeDocId, navigate, locale]);
 
   if (!docId) {
     return (
       <div className="h-full flex items-center justify-center bg-[#f5f6f7] text-sm text-[#8f959e]">
-        正在加载文档...
+        {locale === 'zh-CN'
+          ? '正在加载文档...'
+          : locale === 'es'
+            ? 'Cargando documento…'
+            : locale === 'pt-BR'
+              ? 'Carregando documento…'
+              : 'Loading document…'}
       </div>
     );
   }
 
   return (
-    <WordEditor
-      docId={docId}
-      branding={{ logo: '/logo.png', name: '易飞文档' }}
-      guardUnload
-      onDocIdChange={(id) => navigate(`/edit/${id}`)}
-    />
+    <>
+      <WordEditor
+        docId={docId}
+        locale={locale}
+        branding={{ logo: '/logo.png', name: '易飞文档' }}
+        guardUnload
+        onDocIdChange={(id) => navigate(`/edit/${id}?locale=${locale}`)}
+      />
+      <LanguageSwitcher locale={locale} onChange={onLocaleChange} />
+    </>
   );
 }
 
 // 无列表页：任何路由直接进入编辑器；"/" 打开最近编辑的文档
 function App() {
+  const [locale, setLocale] = useState<WordLocale>(readLocale);
+
+  const handleLocaleChange = (next: WordLocale) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('locale', next);
+    window.history.replaceState(null, '', url);
+    setLocale(next);
+  };
+
   return (
     <Routes>
-      <Route path="/" element={<EditorRoute />} />
-      <Route path="/edit" element={<EditorRoute />} />
-      <Route path="/edit/:id" element={<EditorRoute />} />
-      <Route path="*" element={<EditorRoute />} />
+      <Route path="/" element={<EditorRoute locale={locale} onLocaleChange={handleLocaleChange} />} />
+      <Route path="/edit" element={<EditorRoute locale={locale} onLocaleChange={handleLocaleChange} />} />
+      <Route
+        path="/edit/:id"
+        element={<EditorRoute locale={locale} onLocaleChange={handleLocaleChange} />}
+      />
+      <Route path="*" element={<EditorRoute locale={locale} onLocaleChange={handleLocaleChange} />} />
     </Routes>
   );
 }

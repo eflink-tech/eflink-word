@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Check, type LucideIcon } from 'lucide-react';
 import type { RowFlex } from '@hufe921/canvas-editor';
+import { useI18n } from '@eflink-tech/office-kit';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { WordAlignIcon, WordCaretDown } from '../../components/icons/wordIcons';
 
@@ -15,17 +16,18 @@ interface AlignSelectProps {
 // canvas-editor RowFlex 枚举值（字符串字面量）：
 //   LEFT='left', CENTER='center', RIGHT='right',
 //   ALIGNMENT='alignment' (两端对齐), JUSTIFY='justify' (分散对齐)
-const ALIGNMENTS: { value: RowFlex; label: string; icon: LucideIcon }[] = [
-  { value: 'left' as RowFlex, label: '左对齐', icon: AlignLeft },
-  { value: 'center' as RowFlex, label: '居中', icon: AlignCenter },
-  { value: 'right' as RowFlex, label: '右对齐', icon: AlignRight },
-  { value: 'alignment' as RowFlex, label: '两端对齐', icon: AlignJustify },
-  { value: 'justify' as RowFlex, label: '分散对齐', icon: AlignJustify },
+const ALIGNMENTS: { value: RowFlex; labelKey: string; icon: LucideIcon }[] = [
+  { value: 'left' as RowFlex, labelKey: 'word.align.left', icon: AlignLeft },
+  { value: 'center' as RowFlex, labelKey: 'word.align.center', icon: AlignCenter },
+  { value: 'right' as RowFlex, labelKey: 'word.align.right', icon: AlignRight },
+  { value: 'alignment' as RowFlex, labelKey: 'word.align.justify', icon: AlignJustify },
+  { value: 'justify' as RowFlex, labelKey: 'word.align.distributed', icon: AlignJustify },
 ];
 
 const DEFAULT_ALIGN: RowFlex = 'left' as RowFlex;
 
 export function AlignSelect({ value, onChange }: AlignSelectProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const current = value ?? DEFAULT_ALIGN;
@@ -40,8 +42,8 @@ export function AlignSelect({ value, onChange }: AlignSelectProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="对齐"
-        aria-label="对齐"
+        title={t('word.tb.align')}
+        aria-label={t('word.tb.align')}
         className="mx-px flex h-6 items-center gap-px rounded-[2px] px-0.5 transition-colors hover:bg-black/[0.08]"
       >
         <WordAlignIcon className="h-[18px] w-[18px]" />
@@ -50,7 +52,7 @@ export function AlignSelect({ value, onChange }: AlignSelectProps) {
 
       {open && (
         <div className="absolute top-full left-0 z-[9999] mt-1 w-[104px] rounded-lg border border-black/[0.08] bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
-          {ALIGNMENTS.map(({ value: flexValue, label, icon: Icon }) => (
+          {ALIGNMENTS.map(({ value: flexValue, labelKey, icon: Icon }) => (
             <button
               key={flexValue}
               type="button"
@@ -63,7 +65,7 @@ export function AlignSelect({ value, onChange }: AlignSelectProps) {
               }`}
             >
               <Icon size={15} className="text-[#8f959e]" />
-              <span className="flex-1">{label}</span>
+              <span className="flex-1">{t(labelKey)}</span>
               {flexValue === current && <Check size={13} className="text-[#4991f2]" />}
             </button>
           ))}

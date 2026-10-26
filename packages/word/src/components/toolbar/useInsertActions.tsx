@@ -2,10 +2,12 @@
 // Task 2.3：已从 TipTap 迁移到 canvas-editor API
 import { useRef, useState, useEffect } from 'react';
 import type Editor from '@hufe921/canvas-editor';
+import { useI18n } from '@eflink-tech/office-kit';
 import { LinkDialog } from './LinkDialog';
 
 /** 图片上传：本地选择文件 → 校验 → dataURL 通过 executeImage 插入 canvas-editor */
 export function useImageInsert(editor: Editor | null) {
+  const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -22,11 +24,11 @@ export function useImageInsert(editor: Editor | null) {
     const file = e.target.files?.[0];
     if (!file || !editor) return;
     if (!file.type.startsWith('image/')) {
-      setToast('请选择图片文件');
+      setToast(t('word.insert.imageOnly'));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setToast('图片不能超过 5MB');
+      setToast(t('word.insert.imageTooLarge'));
       return;
     }
     const reader = new FileReader();

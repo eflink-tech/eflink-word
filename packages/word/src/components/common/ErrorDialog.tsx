@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useI18n } from '@eflink-tech/office-kit';
 
 interface ErrorDialogProps {
   title: string;
@@ -8,6 +9,7 @@ interface ErrorDialogProps {
 
 /** 操作失败提示弹窗（docx 导入导出等场景） */
 export function ErrorDialog({ title, message, onClose }: ErrorDialogProps) {
+  const { t } = useI18n();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -37,7 +39,7 @@ export function ErrorDialog({ title, message, onClose }: ErrorDialogProps) {
             onClick={onClose}
             className="rounded bg-blue-500 px-3 py-1.5 text-xs text-white hover:bg-blue-600"
           >
-            知道了
+            {t('word.dialog.gotIt')}
           </button>
         </div>
       </div>

@@ -1,46 +1,47 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useI18n } from '@eflink-tech/office-kit';
 
 interface ShortcutItem {
-  action: string;
+  actionKey: string;
   win: string;
   mac: string;
 }
 
-const SHORTCUT_GROUPS: { category: string; items: ShortcutItem[] }[] = [
+const SHORTCUT_GROUPS: { categoryKey: string; items: ShortcutItem[] }[] = [
   {
-    category: '文件',
+    categoryKey: 'word.shortcuts.categoryFile',
     items: [
-      { action: '新建文档', win: 'Ctrl + N', mac: '⌘ + N' },
-      { action: '保存到浏览器', win: 'Ctrl + S', mac: '⌘ + S' },
-      { action: '打印', win: 'Ctrl + P', mac: '⌘ + P' },
+      { actionKey: 'word.menu.newDoc', win: 'Ctrl + N', mac: '⌘ + N' },
+      { actionKey: 'action.saveToBrowser', win: 'Ctrl + S', mac: '⌘ + S' },
+      { actionKey: 'action.print', win: 'Ctrl + P', mac: '⌘ + P' },
     ],
   },
   {
-    category: '编辑',
+    categoryKey: 'word.shortcuts.categoryEdit',
     items: [
-      { action: '撤销', win: 'Ctrl + Z', mac: '⌘ + Z' },
-      { action: '重做', win: 'Ctrl + Y', mac: '⌘ + Shift + Z' },
-      { action: '加粗', win: 'Ctrl + B', mac: '⌘ + B' },
-      { action: '斜体', win: 'Ctrl + I', mac: '⌘ + I' },
-      { action: '下划线', win: 'Ctrl + U', mac: '⌘ + U' },
-      { action: '删除线', win: 'Ctrl + Shift + X', mac: '⌘ + Shift + X' },
+      { actionKey: 'action.undo', win: 'Ctrl + Z', mac: '⌘ + Z' },
+      { actionKey: 'action.redo', win: 'Ctrl + Y', mac: '⌘ + Shift + Z' },
+      { actionKey: 'word.tb.bold', win: 'Ctrl + B', mac: '⌘ + B' },
+      { actionKey: 'word.tb.italic', win: 'Ctrl + I', mac: '⌘ + I' },
+      { actionKey: 'word.tb.underline', win: 'Ctrl + U', mac: '⌘ + U' },
+      { actionKey: 'word.tb.strike', win: 'Ctrl + Shift + X', mac: '⌘ + Shift + X' },
     ],
   },
   {
-    category: '格式',
+    categoryKey: 'word.shortcuts.categoryFormat',
     items: [
-      { action: '左对齐', win: 'Ctrl + Shift + L', mac: '⌘ + Shift + L' },
-      { action: '居中对齐', win: 'Ctrl + Shift + E', mac: '⌘ + Shift + E' },
-      { action: '右对齐', win: 'Ctrl + Shift + R', mac: '⌘ + Shift + R' },
-      { action: '两端对齐', win: 'Ctrl + Shift + J', mac: '⌘ + Shift + J' },
+      { actionKey: 'word.align.left', win: 'Ctrl + Shift + L', mac: '⌘ + Shift + L' },
+      { actionKey: 'word.align.center', win: 'Ctrl + Shift + E', mac: '⌘ + Shift + E' },
+      { actionKey: 'word.align.right', win: 'Ctrl + Shift + R', mac: '⌘ + Shift + R' },
+      { actionKey: 'word.align.justify', win: 'Ctrl + Shift + J', mac: '⌘ + Shift + J' },
     ],
   },
   {
-    category: '查找',
+    categoryKey: 'word.shortcuts.categoryFind',
     items: [
-      { action: '查找', win: 'Ctrl + F', mac: '⌘ + F' },
-      { action: '替换', win: 'Ctrl + H', mac: '⌘ + H' },
+      { actionKey: 'action.find', win: 'Ctrl + F', mac: '⌘ + F' },
+      { actionKey: 'word.shortcuts.replace', win: 'Ctrl + H', mac: '⌘ + H' },
     ],
   },
 ];
@@ -55,6 +56,7 @@ interface ShortcutsDialogProps {
 
 /** 快捷键列表弹窗 */
 export function ShortcutsDialog({ onClose }: ShortcutsDialogProps) {
+  const { t } = useI18n();
   const mac = isMac();
 
   useEffect(() => {
@@ -73,18 +75,18 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="快捷键"
+        aria-label={t('word.shortcuts.title')}
         tabIndex={-1}
         className="w-[480px] max-h-[70vh] overflow-y-auto rounded-md border border-[#e7e9eb] bg-white shadow-lg outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e7e9eb] bg-white px-5 py-3">
-          <span className="text-[15px] font-medium text-[#1f2329]">快捷键</span>
+          <span className="text-[15px] font-medium text-[#1f2329]">{t('word.shortcuts.title')}</span>
           <button
             type="button"
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t('action.close')}
             className="flex h-7 w-7 items-center justify-center rounded-[2px] text-[#51565f] hover:bg-[#f2f3f4]"
           >
             <X size={16} />
@@ -94,14 +96,14 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps) {
         {/* 内容 */}
         <div className="p-4">
           {SHORTCUT_GROUPS.map((group) => (
-            <div key={group.category} className="mb-4">
-              <div className="mb-2 text-[13px] font-medium text-[#1f2329]">{group.category}</div>
+            <div key={group.categoryKey} className="mb-4">
+              <div className="mb-2 text-[13px] font-medium text-[#1f2329]">{t(group.categoryKey)}</div>
               {group.items.map((item) => (
                 <div
-                  key={item.action}
+                  key={item.actionKey}
                   className="flex items-center justify-between py-1.5"
                 >
-                  <span className="text-[13px] text-[#51565f]">{item.action}</span>
+                  <span className="text-[13px] text-[#51565f]">{t(item.actionKey)}</span>
                   <kbd className="rounded border border-[#e7e9eb] bg-[#f5f6f7] px-2 py-0.5 font-mono text-[12px] text-[#51565f]">
                     {mac ? item.mac : item.win}
                   </kbd>

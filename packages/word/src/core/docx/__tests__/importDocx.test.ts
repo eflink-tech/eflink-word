@@ -74,7 +74,7 @@ describe('createDocxImporter', () => {
     expect(values.some((el) => el.value === '普通' && !el.bold)).toBe(true);
   });
 
-  it('缺少 word/document.xml 时抛出中文错误', async () => {
+  it('缺少 word/document.xml 时抛出无效文件错误', async () => {
     const zip = new JSZip();
     zip.file('[Content_Types].xml', CONTENT_TYPES_PLACEHOLDER);
     const buffer = await zip.generateAsync({ type: 'arraybuffer' });
@@ -82,6 +82,6 @@ describe('createDocxImporter', () => {
       createDocxImporter(command as unknown as Editor['command'])({
         arrayBuffer: buffer,
       }),
-    ).rejects.toThrow('无效的 docx 文件');
+    ).rejects.toMatchObject({ code: 'word.error.docxInvalid' });
   });
 });

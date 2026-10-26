@@ -131,7 +131,9 @@ describe('exportImport', () => {
     it('无效 JSON 抛错', async () => {
       const editor = makeEditor();
       const file = new File(['not-json'], 'bad.efword', { type: 'application/json' });
-      await expect(importEfword(editor, file)).rejects.toThrow('文件格式无效');
+      await expect(importEfword(editor, file)).rejects.toMatchObject({
+        code: 'word.error.efwInvalid',
+      });
     });
 
     it('空文档抛错', async () => {
@@ -141,7 +143,9 @@ describe('exportImport', () => {
         'empty.efword',
         { type: 'application/json' },
       );
-      await expect(importEfword(editor, file)).rejects.toThrow('文档内容为空');
+      await expect(importEfword(editor, file)).rejects.toMatchObject({
+        code: 'word.error.efwEmpty',
+      });
     });
   });
 
@@ -158,7 +162,9 @@ describe('exportImport', () => {
 
     it('无页面时抛错', async () => {
       const editor = makeEditor({ pageImages: [] });
-      await expect(exportPdf(editor, 'empty')).rejects.toThrow('文档为空');
+      await expect(exportPdf(editor, 'empty')).rejects.toMatchObject({
+        code: 'word.error.pdfEmpty',
+      });
     });
   });
 

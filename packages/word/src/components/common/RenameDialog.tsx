@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useI18n } from '@eflink-tech/office-kit';
 
 interface RenameDialogProps {
   currentName: string;
@@ -9,6 +10,7 @@ interface RenameDialogProps {
 
 /** 修改文档名称弹窗 */
 export function RenameDialog({ currentName, onConfirm, onCancel }: RenameDialogProps) {
+  const { t } = useI18n();
   const [name, setName] = useState(currentName);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,17 +51,17 @@ export function RenameDialog({ currentName, onConfirm, onCancel }: RenameDialogP
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="修改文档名称"
+        aria-label={t('word.rename.title')}
         tabIndex={-1}
         className="w-[380px] rounded-md border border-[#e7e9eb] bg-white p-5 shadow-lg outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-[15px] font-medium text-[#1f2329]">修改文档名称</span>
+          <span className="text-[15px] font-medium text-[#1f2329]">{t('word.rename.title')}</span>
           <button
             type="button"
             onClick={onCancel}
-            aria-label="关闭"
+            aria-label={t('action.close')}
             className="flex h-7 w-7 items-center justify-center rounded-[2px] text-[#51565f] hover:bg-[#f2f3f4]"
           >
             <X size={16} />
@@ -71,7 +73,7 @@ export function RenameDialog({ currentName, onConfirm, onCancel }: RenameDialogP
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="请输入文档名称"
+          placeholder={t('word.rename.placeholder')}
           className="mb-4 h-9 w-full rounded border border-[#e7e9eb] px-3 text-[14px] text-[#1f2329] outline-none focus:border-blue-400"
         />
 
@@ -81,7 +83,7 @@ export function RenameDialog({ currentName, onConfirm, onCancel }: RenameDialogP
             onClick={onCancel}
             className="rounded border border-[#e7e9eb] px-3 py-1.5 text-xs text-[#51565f] hover:bg-[#f2f3f4]"
           >
-            取消
+            {t('action.cancel')}
           </button>
           <button
             type="button"
@@ -89,7 +91,7 @@ export function RenameDialog({ currentName, onConfirm, onCancel }: RenameDialogP
             disabled={!name.trim()}
             className="rounded bg-blue-500 px-3 py-1.5 text-xs text-white hover:bg-blue-600 disabled:opacity-50"
           >
-            确定
+            {t('action.confirm')}
           </button>
         </div>
       </div>

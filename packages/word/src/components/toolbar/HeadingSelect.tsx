@@ -5,6 +5,7 @@ import { Heading1 } from 'lucide-react';
 import type Editor from '@hufe921/canvas-editor';
 import { TitleLevel } from '@hufe921/canvas-editor';
 import type { IRangeStyle } from '@hufe921/canvas-editor';
+import { useI18n } from '@eflink-tech/office-kit';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { WordCaretDown } from '../../components/icons/wordIcons';
 
@@ -14,28 +15,29 @@ interface HeadingSelectProps {
 }
 
 // canvas-editor TitleLevel 枚举值映射到 UI 标签
-const LEVELS: { level: TitleLevel | null; label: string; fontSize: number }[] = [
-  { level: null, label: '正文', fontSize: 16 },
-  { level: TitleLevel.FIRST, label: '标题 1', fontSize: 26 },
-  { level: TitleLevel.SECOND, label: '标题 2', fontSize: 24 },
-  { level: TitleLevel.THIRD, label: '标题 3', fontSize: 22 },
-  { level: TitleLevel.FOURTH, label: '标题 4', fontSize: 20 },
-  { level: TitleLevel.FIFTH, label: '标题 5', fontSize: 18 },
-  { level: TitleLevel.SIXTH, label: '标题 6', fontSize: 16 },
+const LEVELS: { level: TitleLevel | null; labelKey: string; fontSize: number }[] = [
+  { level: null, labelKey: 'word.heading.normal', fontSize: 16 },
+  { level: TitleLevel.FIRST, labelKey: 'word.heading.h1', fontSize: 26 },
+  { level: TitleLevel.SECOND, labelKey: 'word.heading.h2', fontSize: 24 },
+  { level: TitleLevel.THIRD, labelKey: 'word.heading.h3', fontSize: 22 },
+  { level: TitleLevel.FOURTH, labelKey: 'word.heading.h4', fontSize: 20 },
+  { level: TitleLevel.FIFTH, labelKey: 'word.heading.h5', fontSize: 18 },
+  { level: TitleLevel.SIXTH, labelKey: 'word.heading.h6', fontSize: 16 },
 ];
 
-function labelOf(level: TitleLevel | null): string {
+function labelOf(level: TitleLevel | null, t: (key: string) => string): string {
   const found = LEVELS.find((l) => l.level === level);
-  return found?.label ?? '正文';
+  return t(found?.labelKey ?? 'word.heading.normal');
 }
 
 export function HeadingSelect({ editor, level }: HeadingSelectProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setOpen(false), []);
   useClickOutside(wrapperRef, close, open);
 
-  const current = labelOf(level);
+  const current = labelOf(level, t);
 
   return (
     <div ref={wrapperRef} className="relative shrink-0">
@@ -50,9 +52,9 @@ export function HeadingSelect({ editor, level }: HeadingSelectProps) {
 
       {open && (
         <div className="absolute top-full left-0 z-[9999] mt-1 w-[120px] rounded-lg border border-black/[0.08] bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
-          {LEVELS.map(({ level: lvl, label, fontSize }) => (
+          {LEVELS.map(({ level: lvl, labelKey, fontSize }) => (
             <button
-              key={label}
+              key={labelKey}
               type="button"
               onClick={() => {
                 // executeTitle(null) 表示回到正文；传 TitleLevel 枚举值设置标题
@@ -60,12 +62,12 @@ export function HeadingSelect({ editor, level }: HeadingSelectProps) {
                 setOpen(false);
               }}
               className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-[#f2f3f4] ${
-                label === current ? 'bg-[#f2f3f4] text-[#1f2329]' : 'text-[#454D5A]'
+                t(labelKey) === current ? 'bg-[#f2f3f4] text-[#1f2329]' : 'text-[#454D5A]'
               }`}
               style={{ fontSize }}
             >
               {lvl !== null && <Heading1 size={13} className="shrink-0 text-[#8f959e]" />}
-              <span className="truncate">{label}</span>
+              <span className="truncate">{t(labelKey)}</span>
             </button>
           ))}
         </div>

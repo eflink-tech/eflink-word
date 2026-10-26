@@ -1,10 +1,11 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { Share2, MessageCircle } from 'lucide-react';
+import { I18nProvider, useI18n, type OfficeLocale } from '@eflink-tech/office-kit';
 import { useDocumentStore } from '../store/documentStore';
 import { useEditorStore } from '../store/editorStore';
 import { useUIStore } from '../store/uiStore';
 import { Toolbar } from './toolbar/Toolbar';
-import { BrandHeader } from './toolbar/BrandHeader';
+import { WordMenuBar } from './menu/WordMenuBar';
 import { ShareDialog } from './toolbar/ShareDialog';
 import { SearchPanel } from './toolbar/SearchPanel';
 import { Editor } from './editor/Editor';
@@ -18,6 +19,10 @@ import { writeDraft, removeDraft } from '../storage/draft';
 import { getWordShareHandler } from '../core/share/shareBridge';
 import type { WordDocument } from '../types/document';
 import type { StorageAdapter } from '../storage/types';
+import { WORD_MESSAGES } from '../i18n/messages';
+
+/** 编辑器界面语言；默认 zh-CN，与 eflink.tech 现有站点保持一致 */
+export type WordLocale = OfficeLocale;
 
 /** 品牌区配置：编辑器左上角的 logo 与产品名 */
 export interface WordEditorBrand {
@@ -28,6 +33,8 @@ export interface WordEditorBrand {
 export interface WordEditorProps {
   /** 要打开的文档 id，内容经 storage 加载 */
   docId: string;
+  /** 界面语言（zh-CN / en / es / pt-BR），默认 zh-CN */
+  locale?: WordLocale;
   /** 文档存储实现；传入后注册为全局默认。缺省用内置 IndexedDB（库名 eflink-word） */
   storage?: StorageAdapter;
   /** 品牌区（logo + 产品名）；不传或传 false 隐藏 */
@@ -48,7 +55,17 @@ export interface WordEditorProps {
   onDocError?: (err: unknown) => void;
 }
 
-export function WordEditor({
+export function WordEditor({ locale = 'zh-CN', ...props }: WordEditorProps) {
+  return (
+    <I18nProvider locale={locale} messages={WORD_MESSAGES}>
+      <WordEditorInner {...props} />
+    </I18nProvider>
+  );
+}
+
+type WordEditorInnerProps = Omit<WordEditorProps, 'locale'>;
+
+function WordEditorInner({
   docId,
   storage,
   branding = false,
@@ -59,7 +76,8 @@ export function WordEditor({
   onDocIdChange,
   onDocLoaded,
   onDocError,
-}: WordEditorProps) {
+}: WordEditorInnerProps) {
+  const { t } = useI18n();
   const { currentDocument, openDocument, setDocIdChangeListener } = useDocumentStore();
   const { editor, save, isDirty, contentVersion } = useEditorStore();
   const {
@@ -222,43 +240,53 @@ export function WordEditor({
   if (!currentDocument) {
     return (
       <div className="h-full flex items-center justify-center bg-[#f5f6f7] text-sm text-[#8f959e]">
-        正在加载文档...
+        {t('shell.loading')}
       </div>
     );
   }
 
   const hasTopRow = Boolean(branding) || showToolbar;
 
+  const showShare = getWordShareHandler() !== null;
+  const headerActions = showShare ? (
+    <>
+      <button
+        type="button"
+        onClick={() => void openShare()}
+        title={t('shell.share')}
+        className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
+      >
+        <Share2 size={14} />
+        {t('shell.share')}
+      </button>
+      <button
+        type="button"
+        onClick={() => window.open('/contact', '_blank')}
+        title={t('shell.feedback')}
+        className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
+      >
+        <MessageCircle size={14} />
+        {t('shell.feedback')}
+      </button>
+    </>
+  ) : null;
+
   return (
     <div className="h-full min-w-[960px] flex flex-col bg-[#f5f6f7]">
-      {/* 顶部单行：左侧品牌+文档标题，中间居中工具栏，右侧分享入口 */}
+      {/* 顶栏：返回 + 品牌 + 横向主菜单 + 分享/反馈 */}
       {hasTopRow && (
-        <div className="no-print relative z-[101] flex h-10 shrink-0 items-center border-b border-black/[0.06] bg-white px-3">
-          {branding ? <BrandHeader logo={branding.logo} name={branding.name} /> : null}
-          {showToolbar && <Toolbar editor={editor} />}
-          {/* 分享入口仅在宿主注入分享实现后出现（纯组件独立运行时不显示） */}
-          {getWordShareHandler() !== null && (
-            <>
-            <button
-              type="button"
-              onClick={() => void openShare()}
-              title="生成分享链接"
-              className="ml-1 flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
-            >
-              <Share2 size={14} />
-              分享
-            </button>
-            <button
-              type="button"
-              onClick={() => window.open('/contact', '_blank')}
-              title="问题反馈"
-              className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
-            >
-              <MessageCircle size={14} />
-              反馈
-            </button>
-            </>
-          )}
+        <WordMenuBar
+          editor={editor}
+          brand={branding}
+          showMenus={showToolbar}
+          actions={headerActions}
+        />
+      )}
+
+      {/* 工具栏行：与顶栏分离，窄屏时按组折叠到「⋯」 */}
+      {showToolbar && (
+        <div className="no-print flex h-10 shrink-0 items-center border-b border-black/[0.06] bg-white px-3">
+          <Toolbar editor={editor} />
         </div>
       )}
 
@@ -296,15 +324,15 @@ export function WordEditor({
           <button
             type="button"
             onClick={() => setFloatingOpen(true)}
-            title="展开目录"
-            aria-label="展开目录"
+            title={t('word.catalog.open')}
+            aria-label={t('word.catalog.open')}
             className="no-print absolute left-0 top-1/2 z-20 -translate-y-1/2 rounded-r-md border border-l-0 border-black/[0.08] bg-white px-[7px] py-3 shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
           >
             <span
               className="text-[13px] leading-5 text-[#1f2329]"
               style={{ writingMode: 'vertical-rl', letterSpacing: '4px' }}
             >
-              目录
+              {t('word.catalog.title')}
             </span>
           </button>
         )}

@@ -2,27 +2,28 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { RowFlex, NumberType } from '@hufe921/canvas-editor';
 import { X } from 'lucide-react';
+import { useI18n } from '@eflink-tech/office-kit';
 import { FONT_SIZES } from '../../components/toolbar/FontSizeSelect';
 import { ColorPicker as StandaloneColorPicker } from '../../components/color';
 import { useUIStore } from '../../store/uiStore';
 
 /** 与 FontFamilySelect 同源，该文件未导出常量 */
-const FONTS = [
-  { label: '微软雅黑', value: 'Microsoft YaHei' },
-  { label: '华文宋体', value: 'STSong' },
-  { label: '华文黑体', value: 'STHeiti' },
-  { label: '华文仿宋', value: 'STFangsong' },
-  { label: '华文楷体', value: 'STKaiti' },
-  { label: '华文琥珀', value: 'STHupo' },
-  { label: '华文隶书', value: 'STLiti' },
-  { label: '华文新魏', value: 'STXinwei' },
-  { label: '华文行楷', value: 'STXingkai' },
-  { label: '华文中宋', value: 'STZhongsong' },
-  { label: '华文彩云', value: 'STCaiyun' },
-  { label: '宋体', value: 'SimSun' },
-  { label: '黑体', value: 'SimHei' },
-  { label: '楷体', value: 'KaiTi' },
-  { label: '仿宋', value: 'FangSong' },
+const FONTS: { label?: string; labelKey?: string; value: string }[] = [
+  { labelKey: 'word.font.microsoftYaHei', value: 'Microsoft YaHei' },
+  { labelKey: 'word.font.stsong', value: 'STSong' },
+  { labelKey: 'word.font.stheiti', value: 'STHeiti' },
+  { labelKey: 'word.font.stfangsong', value: 'STFangsong' },
+  { labelKey: 'word.font.stkaiti', value: 'STKaiti' },
+  { labelKey: 'word.font.sthupo', value: 'STHupo' },
+  { labelKey: 'word.font.stliti', value: 'STLiti' },
+  { labelKey: 'word.font.stxinwei', value: 'STXinwei' },
+  { labelKey: 'word.font.stxingkai', value: 'STXingkai' },
+  { labelKey: 'word.font.stzhongsong', value: 'STZhongsong' },
+  { labelKey: 'word.font.stcaiyun', value: 'STCaiyun' },
+  { labelKey: 'word.font.simsun', value: 'SimSun' },
+  { labelKey: 'word.font.simhei', value: 'SimHei' },
+  { labelKey: 'word.font.kaiti', value: 'KaiTi' },
+  { labelKey: 'word.font.fangsong', value: 'FangSong' },
   { label: 'Arial', value: 'Arial' },
   { label: 'Segoe UI', value: 'Segoe UI' },
   { label: 'Times New Roman', value: 'Times New Roman' },
@@ -51,10 +52,10 @@ function parsePx(raw: string): number {
 }
 
 // 页码格式预设 — 占位符与 canvas-editor FORMAT_PLACEHOLDER 一致
-const PAGE_NUMBER_FORMATS = [
+const PAGE_NUMBER_FORMATS: { label?: string; labelKey?: string; value: string }[] = [
   { label: '1, 2, 3...', value: '{pageNo}' },
-  { label: '第 1 页', value: '第{pageNo}页' },
-  { label: '第 1 页/共 10 页', value: '第{pageNo}页/共{pageCount}页' },
+  { labelKey: 'word.settings.pageFormat1', value: '第{pageNo}页' },
+  { labelKey: 'word.settings.pageFormat2', value: '第{pageNo}页/共{pageCount}页' },
   { label: '1/10', value: '{pageNo}/{pageCount}' },
   { label: '- 1 -', value: '- {pageNo} -' },
 ];
@@ -153,17 +154,18 @@ type TabId = 'general' | 'header' | 'footer' | 'pageNumber';
 
 interface Tab {
   id: TabId;
-  label: string;
+  labelKey: string;
 }
 
 const TABS: Tab[] = [
-  { id: 'general', label: '常规' },
-  { id: 'header', label: '页眉' },
-  { id: 'footer', label: '页脚' },
-  { id: 'pageNumber', label: '页码' },
+  { id: 'general', labelKey: 'word.settings.tabGeneral' },
+  { id: 'header', labelKey: 'word.settings.tabHeader' },
+  { id: 'footer', labelKey: 'word.settings.tabFooter' },
+  { id: 'pageNumber', labelKey: 'word.settings.tabPageNumber' },
 ];
 
 export function EditorSettingsModal() {
+  const { t } = useI18n();
   const {
     editorPrefs,
     margin,
@@ -293,7 +295,7 @@ export function EditorSettingsModal() {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="编辑器设置"
+        aria-label={t('word.settings.title')}
         tabIndex={-1}
         autoFocus
         className="flex h-[600px] w-[650px] flex-col rounded-md border border-[#e7e9eb] bg-white shadow-lg outline-none"
@@ -301,12 +303,12 @@ export function EditorSettingsModal() {
       >
         {/* 标题栏 */}
         <div className="flex items-center justify-between border-b border-[#e7e9eb] px-4 py-3">
-          <div className="text-[14px] font-medium text-[#1f2329]">编辑器设置</div>
+          <div className="text-[14px] font-medium text-[#1f2329]">{t('word.settings.title')}</div>
           <button
             type="button"
             onClick={close}
-            title="关闭"
-            aria-label="关闭"
+            title={t('action.close')}
+            aria-label={t('action.close')}
             className="flex h-6 w-6 items-center justify-center rounded text-[#8f959e] hover:bg-[#f2f3f4] hover:text-[#1f2329]"
           >
             <X size={16} />
@@ -326,7 +328,7 @@ export function EditorSettingsModal() {
                   : 'text-[#8f959e] hover:text-[#1f2329]'
               }`}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -336,7 +338,7 @@ export function EditorSettingsModal() {
           {activeTab === 'general' && (
             <div className="space-y-3">
               <label className="block">
-                <span className="mb-1 block text-[12px] text-[#8f959e]">默认字体</span>
+                <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.defaultFont')}</span>
                 <select
                   className={SELECT_CLS}
                   value={fontFamily}
@@ -344,14 +346,14 @@ export function EditorSettingsModal() {
                 >
                   {FONTS.map((f) => (
                     <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
-                      {f.label}
+                      {t(f.labelKey ?? f.label ?? '')}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-[12px] text-[#8f959e]">默认字号</span>
+                <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.defaultSize')}</span>
                 <select
                   className={SELECT_CLS}
                   value={fontSize}
@@ -359,14 +361,14 @@ export function EditorSettingsModal() {
                 >
                   {FONT_SIZES.map((s) => (
                     <option key={s.value} value={s.value}>
-                      {s.label}
+                      {t(s.labelKey)}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-[12px] text-[#8f959e]">默认行距</span>
+                <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.defaultLineSpacing')}</span>
                 <select
                   className={SELECT_CLS}
                   value={lineHeight}
@@ -381,10 +383,10 @@ export function EditorSettingsModal() {
               </label>
 
               <div>
-                <div className="mb-2 text-[12px] text-[#8f959e]">页边距（px）</div>
+                <div className="mb-2 text-[12px] text-[#8f959e]">{t('word.settings.margins')}</div>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block">
-                    <span className="mb-1 block text-[12px] text-[#8f959e]">上</span>
+                    <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.paragraph.top')}</span>
                     <input
                       type="number"
                       min={0}
@@ -394,7 +396,7 @@ export function EditorSettingsModal() {
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-[12px] text-[#8f959e]">右</span>
+                    <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.paragraph.right')}</span>
                     <input
                       type="number"
                       min={0}
@@ -404,7 +406,7 @@ export function EditorSettingsModal() {
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-[12px] text-[#8f959e]">下</span>
+                    <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.paragraph.bottom')}</span>
                     <input
                       type="number"
                       min={0}
@@ -414,7 +416,7 @@ export function EditorSettingsModal() {
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-[12px] text-[#8f959e]">左</span>
+                    <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.paragraph.left')}</span>
                     <input
                       type="number"
                       min={0}
@@ -439,24 +441,24 @@ export function EditorSettingsModal() {
                   className={CHECKBOX_CLS}
                 />
                 <label htmlFor="header-enabled" className="text-[13px] text-[#1f2329]">
-                  启用页眉
+                  {t('word.settings.enableHeader')}
                 </label>
               </div>
               {headerEnabled && (
                 <>
                   <label className="block">
-                    <span className="mb-1 block text-[12px] text-[#8f959e]">页眉内容</span>
+                    <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.headerContent')}</span>
                     <input
                       type="text"
                       value={headerContent}
                       onChange={(e) => setHeaderContent(e.target.value)}
                       className={INPUT_CLS}
-                      placeholder="输入页眉文字"
+                      placeholder={t('word.settings.headerPlaceholder')}
                     />
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block">
-                      <span className="mb-1 block text-[12px] text-[#8f959e]">字号</span>
+                      <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.fontSize')}</span>
                       <input
                         type="number"
                         min={8}
@@ -467,20 +469,20 @@ export function EditorSettingsModal() {
                       />
                     </label>
                     <label className="block">
-                      <span className="mb-1 block text-[12px] text-[#8f959e]">对齐</span>
+                      <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.alignment')}</span>
                       <select
                         className={SELECT_CLS}
                         value={headerAlign}
                         onChange={(e) => setHeaderAlign(e.target.value as RowFlex)}
                       >
-                        <option value={RowFlex.LEFT}>左对齐</option>
-                        <option value={RowFlex.CENTER}>居中</option>
-                        <option value={RowFlex.RIGHT}>右对齐</option>
+                        <option value={RowFlex.LEFT}>{t('word.align.left')}</option>
+                        <option value={RowFlex.CENTER}>{t('word.align.center')}</option>
+                        <option value={RowFlex.RIGHT}>{t('word.align.right')}</option>
                       </select>
                     </label>
                   </div>
                   <div>
-                    <div className="mb-1 text-[12px] text-[#8f959e]">颜色</div>
+                    <div className="mb-1 text-[12px] text-[#8f959e]">{t('word.settings.color')}</div>
                     <InlineColorButton
                       value={headerColor}
                       onChange={setHeaderColor}
@@ -503,24 +505,24 @@ export function EditorSettingsModal() {
                   className={CHECKBOX_CLS}
                 />
                 <label htmlFor="footer-enabled" className="text-[13px] text-[#1f2329]">
-                  启用页脚
+                  {t('word.settings.enableFooter')}
                 </label>
               </div>
               {footerEnabled && (
                 <>
                   <label className="block">
-                    <span className="mb-1 block text-[12px] text-[#8f959e]">页脚内容</span>
+                    <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.footerContent')}</span>
                     <input
                       type="text"
                       value={footerContent}
                       onChange={(e) => setFooterContent(e.target.value)}
                       className={INPUT_CLS}
-                      placeholder="输入页脚文字"
+                      placeholder={t('word.settings.footerPlaceholder')}
                     />
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block">
-                      <span className="mb-1 block text-[12px] text-[#8f959e]">字号</span>
+                      <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.fontSize')}</span>
                       <input
                         type="number"
                         min={8}
@@ -531,20 +533,20 @@ export function EditorSettingsModal() {
                       />
                     </label>
                     <label className="block">
-                      <span className="mb-1 block text-[12px] text-[#8f959e]">对齐</span>
+                      <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.alignment')}</span>
                       <select
                         className={SELECT_CLS}
                         value={footerAlign}
                         onChange={(e) => setFooterAlign(e.target.value as RowFlex)}
                       >
-                        <option value={RowFlex.LEFT}>左对齐</option>
-                        <option value={RowFlex.CENTER}>居中</option>
-                        <option value={RowFlex.RIGHT}>右对齐</option>
+                        <option value={RowFlex.LEFT}>{t('word.align.left')}</option>
+                        <option value={RowFlex.CENTER}>{t('word.align.center')}</option>
+                        <option value={RowFlex.RIGHT}>{t('word.align.right')}</option>
                       </select>
                     </label>
                   </div>
                   <div>
-                    <div className="mb-1 text-[12px] text-[#8f959e]">颜色</div>
+                    <div className="mb-1 text-[12px] text-[#8f959e]">{t('word.settings.color')}</div>
                     <InlineColorButton
                       value={footerColor}
                       onChange={setFooterColor}
@@ -567,13 +569,13 @@ export function EditorSettingsModal() {
                   className={CHECKBOX_CLS}
                 />
                 <label htmlFor="pagenumber-enabled" className="text-[13px] text-[#1f2329]">
-                  启用页码
+                  {t('word.settings.enablePageNumber')}
                 </label>
               </div>
               {pageNumberEnabled && (
                 <>
                   <label className="block">
-                    <span className="mb-1 block text-[12px] text-[#8f959e]">页码格式</span>
+                    <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.pageNumberFormat')}</span>
                     <select
                       className={SELECT_CLS}
                       value={pageNumberFormat}
@@ -581,14 +583,14 @@ export function EditorSettingsModal() {
                     >
                       {PAGE_NUMBER_FORMATS.map((f) => (
                         <option key={f.value} value={f.value}>
-                          {f.label}
+                          {t(f.labelKey ?? f.label ?? '')}
                         </option>
                       ))}
                     </select>
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block">
-                      <span className="mb-1 block text-[12px] text-[#8f959e]">字号</span>
+                      <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.fontSize')}</span>
                       <input
                         type="number"
                         min={8}
@@ -599,32 +601,32 @@ export function EditorSettingsModal() {
                       />
                     </label>
                     <label className="block">
-                      <span className="mb-1 block text-[12px] text-[#8f959e]">对齐</span>
+                      <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.alignment')}</span>
                       <select
                         className={SELECT_CLS}
                         value={pageNumberAlign}
                         onChange={(e) => setPageNumberAlign(e.target.value as RowFlex)}
                       >
-                        <option value={RowFlex.LEFT}>左对齐</option>
-                        <option value={RowFlex.CENTER}>居中</option>
-                        <option value={RowFlex.RIGHT}>右对齐</option>
+                        <option value={RowFlex.LEFT}>{t('word.align.left')}</option>
+                        <option value={RowFlex.CENTER}>{t('word.align.center')}</option>
+                        <option value={RowFlex.RIGHT}>{t('word.align.right')}</option>
                       </select>
                     </label>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block">
-                      <span className="mb-1 block text-[12px] text-[#8f959e]">数字类型</span>
+                      <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.numberType')}</span>
                       <select
                         className={SELECT_CLS}
                         value={pageNumberType}
                         onChange={(e) => setPageNumberType(e.target.value as NumberType)}
                       >
-                        <option value={NumberType.ARABIC}>阿拉伯数字 (1, 2, 3)</option>
-                        <option value={NumberType.CHINESE}>中文数字 (一，二，三)</option>
+                        <option value={NumberType.ARABIC}>{t('word.settings.arabic')}</option>
+                        <option value={NumberType.CHINESE}>{t('word.settings.chinese')}</option>
                       </select>
                     </label>
                     <div>
-                      <div className="mb-1 text-[12px] text-[#8f959e]">颜色</div>
+                      <div className="mb-1 text-[12px] text-[#8f959e]">{t('word.settings.color')}</div>
                       <InlineColorButton
                         value={pageNumberColor}
                         onChange={setPageNumberColor}
@@ -634,7 +636,7 @@ export function EditorSettingsModal() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block">
-                      <span className="mb-1 block text-[12px] text-[#8f959e]">起始页码</span>
+                      <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.startPage')}</span>
                       <input
                         type="number"
                         min={1}
@@ -644,7 +646,7 @@ export function EditorSettingsModal() {
                       />
                     </label>
                     <label className="block">
-                      <span className="mb-1 block text-[12px] text-[#8f959e]">从第几页开始显示</span>
+                      <span className="mb-1 block text-[12px] text-[#8f959e]">{t('word.settings.startPageHint')}</span>
                       <input
                         type="number"
                         min={1}
@@ -667,14 +669,14 @@ export function EditorSettingsModal() {
             onClick={close}
             className="rounded px-3 py-1.5 text-[13px] text-[#41464f] hover:bg-[#f2f3f4]"
           >
-            取消
+            {t('action.cancel')}
           </button>
           <button
             type="button"
             onClick={apply}
             className="rounded bg-[#3370ff] px-3 py-1.5 text-[13px] text-white hover:bg-[#2860e1]"
           >
-            应用
+            {t('action.apply')}
           </button>
         </div>
       </div>

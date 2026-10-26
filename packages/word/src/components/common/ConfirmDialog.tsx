@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useI18n } from '@eflink-tech/office-kit';
 
 interface ConfirmDialogProps {
   title: string;
@@ -13,11 +14,14 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
   title,
   message,
-  confirmText = '确定',
-  cancelText = '取消',
+  confirmText,
+  cancelText,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
+  const confirmLabel = confirmText ?? t('action.confirm');
+  const cancelLabel = cancelText ?? t('action.cancel');
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
@@ -47,14 +51,14 @@ export function ConfirmDialog({
             onClick={onCancel}
             className="rounded border border-[#e7e9eb] px-3 py-1.5 text-xs text-[#51565f] hover:bg-[#f2f3f4]"
           >
-            {cancelText}
+            {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className="rounded bg-blue-500 px-3 py-1.5 text-xs text-white hover:bg-blue-600"
           >
-            {confirmText}
+            {confirmLabel}
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import type Editor from '@hufe921/canvas-editor';
 import { EditorMode, PageMode, PaperDirection } from '@hufe921/canvas-editor';
 import { jsPDF } from 'jspdf';
 import { saveAs } from 'file-saver';
+import { OfficeError } from '@eflink-tech/office-kit';
 
 export const EFWORD_FORMAT = 'efword' as const;
 export const EFWORD_VERSION = '1.0';
@@ -67,7 +68,7 @@ function parseImportPayload(text: string): Record<string, unknown> {
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('文件格式无效，请选择 .efw.json 数据文件');
+    throw new OfficeError('word.error.efwInvalid', 'invalid efw json');
   }
 
   if (isEfwordFile(parsed)) {
@@ -76,7 +77,7 @@ function parseImportPayload(text: string): Record<string, unknown> {
   if (isRawEditorData(parsed)) {
     return parsed;
   }
-  throw new Error('无法识别的文档格式，请使用 .efw.json 数据文件');
+  throw new OfficeError('word.error.efwUnrecognized', 'unrecognized efw payload');
 }
 
 /** exportEfword 可选项 */
@@ -118,7 +119,7 @@ export async function importEfword(editor: Editor, file: File): Promise<void> {
     const hasHeader = Array.isArray(raw.header) && raw.header.length > 0;
     const hasFooter = Array.isArray(raw.footer) && raw.footer.length > 0;
     if (!hasHeader && !hasFooter) {
-      throw new Error('文档内容为空，无法导入');
+      throw new OfficeError('word.error.efwEmpty', 'empty efw document');
     }
   }
   editor.command.executeSetValue(raw);
@@ -158,7 +159,7 @@ export async function exportPdf(editor: Editor, filename = '未命名文档'): P
     });
 
     if (!pages.length) {
-      throw new Error('文档为空，无法导出 PDF');
+      throw new OfficeError('word.error.pdfEmpty', 'empty document for pdf export');
     }
 
     const pdf = new jsPDF({

@@ -15,6 +15,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { useDocumentStore } from '../../store/documentStore';
 import { RenameDialog } from '../common/RenameDialog';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { useI18n } from '@eflink-tech/office-kit';
 import type Editor from '@hufe921/canvas-editor';
 import { PageMode } from '@hufe921/canvas-editor';
 
@@ -24,6 +25,18 @@ interface StatusBarProps {
 
 const BTN =
   'w-6 h-6 flex items-center justify-center cursor-pointer mx-0.5 rounded hover:bg-slate-100 hover:text-slate-700 border-0 bg-transparent p-0';
+
+const PAPER_LABEL_KEYS: Record<string, string> = {
+  法律用纸: 'word.paper.legal',
+  信纸: 'word.paper.letter',
+};
+
+const MARGIN_LABEL_KEYS: Record<string, string> = {
+  标准: 'word.margin.normal',
+  窄: 'word.margin.narrow',
+  适中: 'word.margin.moderate',
+  宽: 'word.margin.wide',
+};
 
 /** 底部下拉通用容器 */
 function FooterDropdown({
@@ -71,6 +84,7 @@ function DropdownItem({
 
 /** 方向选择（纵向/横向） */
 function PaperDirectionMenu() {
+  const { t } = useI18n();
   const { paperDirection, setPaperDirection } = useUIStore();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -79,7 +93,12 @@ function PaperDirectionMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" className={BTN} onClick={() => setOpen((v) => !v)} title="纸张方向">
+      <button
+        type="button"
+        className={BTN}
+        onClick={() => setOpen((v) => !v)}
+        title={t('word.status.paperDirection')}
+      >
         <PaperDirectionIcon />
       </button>
       <FooterDropdown open={open} width={90}>
@@ -90,7 +109,7 @@ function PaperDirectionMenu() {
             setOpen(false);
           }}
         >
-          纵向
+          {t('word.status.portrait')}
         </DropdownItem>
         <DropdownItem
           active={paperDirection === 'horizontal'}
@@ -99,7 +118,7 @@ function PaperDirectionMenu() {
             setOpen(false);
           }}
         >
-          横向
+          {t('word.status.landscape')}
         </DropdownItem>
       </FooterDropdown>
     </div>
@@ -108,6 +127,7 @@ function PaperDirectionMenu() {
 
 /** 纸张类型选择 */
 function PaperSizeMenu() {
+  const { t } = useI18n();
   const { paperSize, setPaperSize } = useUIStore();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -116,7 +136,12 @@ function PaperSizeMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" className={BTN} onClick={() => setOpen((v) => !v)} title="纸张类型">
+      <button
+        type="button"
+        className={BTN}
+        onClick={() => setOpen((v) => !v)}
+        title={t('word.status.paperSize')}
+      >
         <PaperSizeIcon />
       </button>
       <FooterDropdown open={open} width={100}>
@@ -129,7 +154,7 @@ function PaperSizeMenu() {
               setOpen(false);
             }}
           >
-            {p.label}
+            {PAPER_LABEL_KEYS[p.label] ? t(PAPER_LABEL_KEYS[p.label]) : p.label}
           </DropdownItem>
         ))}
       </FooterDropdown>
@@ -139,6 +164,7 @@ function PaperSizeMenu() {
 
 /** 页边距预设 */
 function MarginMenu() {
+  const { t } = useI18n();
   const { margin, setMarginPreset, setSettingsOpen } = useUIStore();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -147,7 +173,12 @@ function MarginMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" className={BTN} onClick={() => setOpen((v) => !v)} title="页边距">
+      <button
+        type="button"
+        className={BTN}
+        onClick={() => setOpen((v) => !v)}
+        title={t('word.status.margin')}
+      >
         <PageMarginIcon />
       </button>
       <FooterDropdown open={open} width={100}>
@@ -160,7 +191,7 @@ function MarginMenu() {
               setOpen(false);
             }}
           >
-            {m.label}
+            {MARGIN_LABEL_KEYS[m.label] ? t(MARGIN_LABEL_KEYS[m.label]) : m.label}
           </DropdownItem>
         ))}
         <DropdownItem
@@ -170,7 +201,7 @@ function MarginMenu() {
             setOpen(false);
           }}
         >
-          自定义…
+          {t('word.status.custom')}
         </DropdownItem>
       </FooterDropdown>
     </div>
@@ -179,11 +210,12 @@ function MarginMenu() {
 
 // 旧系统样式：30px 高度, 12px 字体, 三段式布局
 export function StatusBar({ editor }: StatusBarProps) {
+  const { t } = useI18n();
   const { catalogOpen, toggleCatalog, setSettingsOpen } = useUIStore();
   // 保存状态：内容变化置脏（红点），云端保存成功后恢复已保存
   const isDirty = useEditorStore((s) => s.isDirty);
   // 文档名：跟随 documentStore.currentDocument.title（renameDocument 内部同步更新）
-  const docTitle = useDocumentStore((s) => s.currentDocument?.title) ?? '未命名文档';
+  const docTitle = useDocumentStore((s) => s.currentDocument?.title) ?? t('word.status.unnamed');
   const [renameOpen, setRenameOpen] = useState(false);
   // canvas-editor 事件驱动状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -290,7 +322,7 @@ export function StatusBar({ editor }: StatusBarProps) {
   const modeBtn = (mode: PageMode, label: string, active: boolean) => (
     <button
       type="button"
-      className={`w-6 h-6 flex items-center justify-center cursor-pointer mx-0.5 rounded border-0 hover:bg-slate-100 ${
+      className={`h-6 min-w-6 flex items-center justify-center cursor-pointer mx-0.5 px-1.5 rounded border-0 hover:bg-slate-100 whitespace-nowrap ${
         active ? 'bg-[#e8e9eb] text-[#1f2329]' : 'text-[#646a73]'
       }`}
       onClick={() => setPageModeHandler(mode)}
@@ -306,12 +338,12 @@ export function StatusBar({ editor }: StatusBarProps) {
   return (
     <div className="no-print h-[30px] flex items-center justify-between bg-[#f5f6f7] text-xs text-[#646a73] px-[20px] z-[9]">
       {/* 左侧：文档名 + 目录 + 分页/连页 + 页码 + 字数 */}
-      <div className="flex items-center gap-[8px]">
+      <div className="flex min-w-0 items-center gap-[8px] overflow-hidden whitespace-nowrap">
         <button
           type="button"
           className="flex items-center gap-1 px-1.5 py-0.5 -mx-1.5 rounded border-0 bg-transparent cursor-pointer hover:bg-[#e8e8e8] transition-colors text-[#333] max-w-[200px]"
           onClick={() => setRenameOpen(true)}
-          title="点击重命名文档"
+          title={t('word.status.renameHint')}
         >
           <Pencil size={11} className="flex-shrink-0 text-[#999]" />
           <span className="truncate">{docTitle}</span>
@@ -320,56 +352,54 @@ export function StatusBar({ editor }: StatusBarProps) {
           type="button"
           className={`${BTN} ${catalogOpen ? 'bg-[#e8e9eb]' : ''}`}
           onClick={toggleCatalog}
-          title="目录"
+          title={t('word.status.catalog')}
         >
           <List size={16} />
         </button>
         <div className="flex items-center">
-          {modeBtn(PageMode.PAGING, '分页', isPaging)}
-          {modeBtn(PageMode.CONTINUITY, '连页', isContinuity)}
+          {modeBtn(PageMode.PAGING, t('word.status.paging'), isPaging)}
+          {modeBtn(PageMode.CONTINUITY, t('word.status.continuous'), isContinuity)}
         </div>
-        <span>
-          页面：{currentPage}/{totalPages}
-        </span>
-        <span>字数：{wordCount}</span>
+        <span>{t('status.pageOf', { current: currentPage, total: totalPages })}</span>
+        <span>{t('status.words', { count: wordCount })}</span>
         {/* 保存状态：dirty 时红色未保存，云端保存成功后灰色已保存 */}
         {isDirty ? (
-          <span className="text-[#e02e2e]">● 未保存</span>
+          <span className="text-[#e02e2e]">● {t('shell.unsaved')}</span>
         ) : (
-          <span className="text-[#8f959e]">✓ 已保存</span>
+          <span className="text-[#8f959e]">✓ {t('shell.saved')}</span>
         )}
       </div>
 
       {/* 右侧：缩放 + 纸张设置 + 全屏 */}
-      <div className="flex items-center gap-[4px]">
-        <button type="button" className={BTN} onClick={zoomOut} title="缩小 (Ctrl+-)">
+      <div className="flex shrink-0 items-center gap-[4px]">
+        <button type="button" className={BTN} onClick={zoomOut} title={t('word.status.zoomOutHint')}>
           <ZoomOut size={16} />
         </button>
         <button
           type="button"
           className="w-10 h-6 flex items-center justify-center cursor-pointer text-slate-600 hover:text-blue-600 border-0 bg-transparent p-0"
           onClick={zoomReset}
-          title="显示比例（点击复原 Ctrl+0）"
+          title={t('word.status.zoomResetHint')}
         >
           {zoomPercent}
         </button>
-        <button type="button" className={BTN} onClick={zoomIn} title="放大 (Ctrl+=)">
+        <button type="button" className={BTN} onClick={zoomIn} title={t('word.status.zoomInHint')}>
           <ZoomIn size={16} />
         </button>
         <PaperSizeMenu />
         <PaperDirectionMenu />
         <MarginMenu />
-        <button type="button" className={BTN} onClick={handlePrint} title="打印">
+        <button type="button" className={BTN} onClick={handlePrint} title={t('word.status.print')}>
           <Printer size={16} />
         </button>
-        <button type="button" className={BTN} onClick={toggleFullscreen} title="全屏显示">
+        <button type="button" className={BTN} onClick={toggleFullscreen} title={t('word.status.fullscreen')}>
           <Fullscreen size={16} />
         </button>
         <button
           type="button"
           className={BTN}
           onClick={() => setSettingsOpen(true, 'general')}
-          title="编辑器设置"
+          title={t('word.status.settings')}
         >
           <Settings size={16} />
         </button>

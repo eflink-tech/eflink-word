@@ -17,6 +17,7 @@ import {
   ControlType
 } from '@hufe921/canvas-editor'
 import JSZip from 'jszip'
+import { OfficeError } from '@eflink-tech/office-kit'
 import { measureFontMetrics, parseDocxNumber } from './docxUtils'
 
 declare module '@hufe921/canvas-editor' {
@@ -464,7 +465,7 @@ class DocxParser {
     await this.parseNumbering()
     const docFile = this.zip.file('word/document.xml')
     if (!docFile) {
-      throw new Error('无效的 docx 文件：缺少 word/document.xml，请确认为标准 .docx 格式')
+      throw new OfficeError('word.error.docxInvalid', 'missing word/document.xml')
     }
     const docDom = new DOMParser().parseFromString(
       await docFile.async('text'),

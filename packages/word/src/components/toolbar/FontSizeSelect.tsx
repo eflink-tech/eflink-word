@@ -1,5 +1,6 @@
 // 字号选择下拉（纯受控组件，由 Toolbar 连接 canvas-editor command）
 import { useState, useRef, useEffect } from 'react';
+import { useI18n } from '@eflink-tech/office-kit';
 import { WordCaretDown } from '../../components/icons/wordIcons';
 
 interface FontSizeSelectProps {
@@ -10,35 +11,35 @@ interface FontSizeSelectProps {
 }
 
 // 中文字号与像素值对应表（canvas-editor 使用 px 单位；96dpi 下 1pt ≈ 1.333px）
-export const FONT_SIZES: { label: string; value: number }[] = [
-  { label: '初号', value: 56 },   // 42pt
-  { label: '小初', value: 48 },   // 36pt
-  { label: '一号', value: 35 },   // 26pt
-  { label: '小一', value: 32 },   // 24pt
-  { label: '二号', value: 29 },   // 22pt
-  { label: '小二', value: 24 },   // 18pt
-  { label: '三号', value: 21 },   // 16pt
-  { label: '小三', value: 20 },   // 15pt
-  { label: '四号', value: 19 },   // 14pt
-  { label: '小四', value: 16 },   // 12pt
-  { label: '五号', value: 14 },   // 10.5pt
-  { label: '小五', value: 12 },   // 9pt
-  { label: '六号', value: 10 },   // 7.5pt
-  { label: '小六', value: 9 },    // 6.5pt
-  { label: '七号', value: 7 },    // 5.5pt
-  { label: '八号', value: 6 },    // 5pt
+export const FONT_SIZES: { labelKey: string; value: number }[] = [
+  { labelKey: 'word.size.initial', value: 56 },   // 42pt
+  { labelKey: 'word.size.smallInitial', value: 48 },   // 36pt
+  { labelKey: 'word.size.no1', value: 35 },   // 26pt
+  { labelKey: 'word.size.smallNo1', value: 32 },   // 24pt
+  { labelKey: 'word.size.no2', value: 29 },   // 22pt
+  { labelKey: 'word.size.smallNo2', value: 24 },   // 18pt
+  { labelKey: 'word.size.no3', value: 21 },   // 16pt
+  { labelKey: 'word.size.smallNo3', value: 20 },   // 15pt
+  { labelKey: 'word.size.no4', value: 19 },   // 14pt
+  { labelKey: 'word.size.smallNo4', value: 16 },   // 12pt
+  { labelKey: 'word.size.no5', value: 14 },   // 10.5pt
+  { labelKey: 'word.size.smallNo5', value: 12 },   // 9pt
+  { labelKey: 'word.size.no6', value: 10 },   // 7.5pt
+  { labelKey: 'word.size.smallNo6', value: 9 },    // 6.5pt
+  { labelKey: 'word.size.no7', value: 7 },    // 5.5pt
+  { labelKey: 'word.size.no8', value: 6 },    // 5pt
 ];
 
 export const DEFAULT_FONT_SIZE = 16; // 小四 = 16px ≈ 12pt
-export const DEFAULT_FONT_SIZE_LABEL = '小四';
 
 export function FontSizeSelect({ value, onChange }: FontSizeSelectProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // 当前展示标签：匹配 FONT_SIZES 时用其 label；未匹配显示像素值
   const matched = FONT_SIZES.find((s) => s.value === value);
-  const currentSize = matched ? matched.label : `${value}px`;
+  const currentSize = matched ? t(matched.labelKey) : `${value}px`;
 
   // 点击外部关闭下拉框
   useEffect(() => {
@@ -76,10 +77,10 @@ export function FontSizeSelect({ value, onChange }: FontSizeSelectProps) {
               type="button"
               onClick={() => handleSelect(size)}
               className={`block w-full px-3 py-1.5 text-center text-[13px] hover:bg-[#f2f3f4] ${
-                size.label === currentSize ? 'bg-[#f2f3f4] text-[#1f2329]' : 'text-[#454D5A]'
+                t(size.labelKey) === currentSize ? 'bg-[#f2f3f4] text-[#1f2329]' : 'text-[#454D5A]'
               }`}
             >
-              {size.label}
+              {t(size.labelKey)}
             </button>
           ))}
         </div>

@@ -1,5 +1,6 @@
 // 行距下拉（纯受控组件，由 Toolbar 连接 canvas-editor executeRowMargin）
 import { useState, useRef, useCallback } from 'react';
+import { useI18n } from '@eflink-tech/office-kit';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { WordLineHeightIcon, WordCaretDown } from '../../components/icons/wordIcons';
 
@@ -17,6 +18,7 @@ const DEFAULT_LINE_HEIGHT = 1.3;
 
 /** 行间距下拉（对应旧系统 row-margin 菜单） */
 export function LineHeightSelect({ value, onChange }: LineHeightSelectProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const current = value ?? DEFAULT_LINE_HEIGHT;
@@ -34,8 +36,8 @@ export function LineHeightSelect({ value, onChange }: LineHeightSelectProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title={`行距（当前 ${current}）`}
-        aria-label={`行距（当前 ${current}）`}
+        title={t('word.lineHeight.title', { value: current })}
+        aria-label={t('word.lineHeight.title', { value: current })}
         className="mx-px flex h-6 items-center gap-px rounded-[2px] px-0.5 transition-colors hover:bg-black/[0.08]"
       >
         <WordLineHeightIcon className="h-[18px] w-[18px]" />

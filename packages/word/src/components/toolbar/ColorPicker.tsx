@@ -2,6 +2,7 @@
 // - color/highlight：Toolbar 连接 executeColor / executeHighlight
 // - shading：canvas-editor 无对应命令，Toolbar 以本地 state 包装保持视觉一致
 import { useState, useRef, useCallback } from 'react';
+import { useI18n } from '@eflink-tech/office-kit';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { ColorPicker as StandaloneColorPicker, type ColorSelectOptions } from '../../components/color';
 import {
@@ -28,13 +29,14 @@ export function recentStorageKeyForMode(mode: ToolbarColorMode): string {
   return `eflink-word:recent-colors:${mode}`;
 }
 
-const MODE_TITLES: Record<ToolbarColorMode, string> = {
-  color: '字体颜色',
-  highlight: '高亮',
-  shading: '底纹颜色',
+const MODE_TITLE_KEYS: Record<ToolbarColorMode, string> = {
+  color: 'word.tb.fontColor',
+  highlight: 'word.tb.highlight',
+  shading: 'word.tb.shading',
 };
 
 export function ColorPicker({ value, onSelect, onDefault, mode }: ColorPickerProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -62,8 +64,8 @@ export function ColorPicker({ value, onSelect, onDefault, mode }: ColorPickerPro
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title={MODE_TITLES[mode]}
-        aria-label={MODE_TITLES[mode]}
+        title={t(MODE_TITLE_KEYS[mode])}
+        aria-label={t(MODE_TITLE_KEYS[mode])}
         className="mx-px flex h-6 items-center gap-px rounded-[2px] px-0.5 transition-colors hover:bg-black/[0.08]"
       >
         <span className="relative flex h-[18px] w-[18px] items-center justify-center">
