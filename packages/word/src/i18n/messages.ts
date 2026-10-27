@@ -111,6 +111,7 @@ const ROWS = {
 
   // ── 状态栏 ─────────────────────────────────────────────
   'word.status.unnamed': ['未命名文档', 'Untitled document', 'Documento sin título', 'Documento sem título'],
+  'word.status.untitledDraft': ['未命名文档（本地草稿恢复）', 'Untitled document (restored from local draft)', 'Documento sin título (restaurado del borrador local)', 'Documento sem título (restaurado do rascunho local)'],
   'word.editor.placeholder': ['请输入正文', 'Start typing…', 'Empieza a escribir…', 'Comece a digitar…'],
   'word.status.renameHint': ['点击重命名文档', 'Click to rename', 'Haz clic para cambiar el nombre', 'Clique para renomear'],
   'word.status.catalog': ['目录', 'Outline', 'Índice', 'Sumário'],
@@ -186,6 +187,7 @@ const ROWS = {
   'word.error.pdfExport': ['导出 PDF 失败，请重试', 'Failed to export PDF. Please try again.', 'No se pudo exportar el PDF. Inténtalo de nuevo.', 'Falha ao exportar PDF. Tente novamente.'],
   'word.error.pdfEmpty': ['文档为空，无法导出 PDF', 'The document is empty and cannot be exported as PDF.', 'El documento está vacío y no se puede exportar como PDF.', 'O documento está vazio e não pode ser exportado como PDF.'],
   'word.error.imageExport': ['导出图片失败，请重试', 'Failed to export the image. Please try again.', 'No se pudo exportar la imagen. Inténtalo de nuevo.', 'Falha ao exportar a imagem. Tente novamente.'],
+  'word.error.imageEmpty': ['文档为空，无法导出图片', 'The document is empty and cannot be exported as an image.', 'El documento está vacío y no se puede exportar como imagen.', 'O documento está vazio e não pode ser exportado como imagem.'],
   'word.loading.default': ['正在处理，请稍候…', 'Processing, please wait…', 'Procesando, espera…', 'Processando, aguarde…'],
   'word.loading.exportPdf': ['正在导出 PDF，请稍候…', 'Exporting PDF, please wait…', 'Exportando PDF, espera…', 'Exportando PDF, aguarde…'],
   'word.loading.exportImage': ['正在导出图片，请稍候…', 'Exporting image, please wait…', 'Exportando imagen, espera…', 'Exportando imagem, aguarde…'],
@@ -285,6 +287,9 @@ const ROWS = {
   'word.settings.pageFormat1': ['第 1 页', 'Page 1', 'Página 1', 'Página 1'],
   'word.settings.pageFormat2': ['第 1 页/共 10 页', 'Page 1 of 10', 'Página 1 de 10', 'Página 1 de 10'],
 
+  // ── 编辑器状态（AI 写入等非 React 链路使用） ─────────────
+  'word.editor.notReady': ['编辑器尚未就绪，请稍候重试', 'The editor is not ready yet. Please try again shortly.', 'El editor aún no está listo. Inténtalo en un momento.', 'O editor ainda não está pronto. Tente novamente em instantes.'],
+
   // ── AI 助手 ────────────────────────────────────────────
   'word.ai.title': ['AI 助手', 'AI assistant', 'Asistente de IA', 'Assistente de IA'],
   'word.ai.history': ['会话历史', 'Chat history', 'Historial', 'Histórico'],
@@ -307,6 +312,9 @@ const ROWS = {
   'word.ai.generate': ['生成', 'Generate', 'Generar', 'Gerar'],
   'word.ai.insert': ['插入到文档', 'Insert into document', 'Insertar en el documento', 'Inserir no documento'],
   'word.ai.notConfigured': ['尚未配置 AI 接口，点击右上角 ⚙️ 进行设置。', 'AI is not configured. Click ⚙️ in the top-right corner to set it up.', 'La IA no está configurada. Haz clic en ⚙️ arriba a la derecha para configurarla.', 'A IA não está configurada. Clique em ⚙️ no canto superior direito para configurar.'],
+  'word.ai.invalidApiKey': ['API Key 无效（401），请检查密钥设置', 'Invalid API key (401). Please check your key settings.', 'Clave API no válida (401). Revisa la configuración de la clave.', 'Chave de API inválida (401). Verifique a configuração da chave.'],
+  'word.ai.rateLimited': ['请求过于频繁或额度不足（429），请稍后重试', 'Too many requests or quota exceeded (429). Please try again later.', 'Demasiadas solicitudes o cuota agotada (429). Inténtalo más tarde.', 'Solicitudes demais ou cota esgotada (429). Tente novamente mais tarde.'],
+  'word.ai.requestFailed': ['请求失败，请稍后重试', 'Request failed. Please try again later.', 'Error en la solicitud. Inténtalo de nuevo más tarde.', 'Falha na solicitação. Tente novamente mais tarde.'],
   'word.ai.capabilities': ['你可以让我：撰写/润色文本、总结全文、翻译选区、生成表格……选中文档内容后可用下方快捷操作。', 'Ask me to write or polish text, summarize the document, translate a selection, or generate tables. Select content to use the quick actions below.', 'Puedes pedirme que redacte o pula texto, resuma el documento, traduzca una selección o genere tablas. Selecciona contenido para usar las acciones rápidas.', 'Peça para escrever ou revisar textos, resumir o documento, traduzir uma seleção ou gerar tabelas. Selecione o conteúdo para usar as ações rápidas.'],
   'word.ai.replaceSelection': ['用最新结果替换选中内容', 'Replace selection with the latest result', 'Reemplazar la selección con el último resultado', 'Substituir a seleção pelo último resultado'],
   'word.ai.stop': ['停止', 'Stop', 'Detener', 'Parar'],

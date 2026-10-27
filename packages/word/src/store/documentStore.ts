@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createWordDocument, type DocumentMeta, type WordDocument } from '../types/document';
 import { getDefaultStorage } from '../storage/registry';
 import { readDraft } from '../storage/draft';
+import { wordT } from '../i18n/runtime';
 import { useEditorStore } from './editorStore';
 
 /** 文档 id 变化监听器：新建文档导致当前文档切换时触发，宿主据此同步路由等 */
@@ -96,7 +97,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       // 云端加载成功时不读草稿
       const draft = readDraft(id);
       if (!draft) throw err;
-      doc = { ...createWordDocument({ title: '未命名文档（本地草稿恢复）', content: draft }), id };
+      doc = { ...createWordDocument({ title: wordT('word.status.untitledDraft'), content: draft }), id };
       // 草稿内容尚未落库：恢复后视为未保存，由用户手动 ⌘S/Ctrl+S 落云端
       useEditorStore.setState({ isDirty: true });
     }

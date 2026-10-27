@@ -10,6 +10,10 @@ migrateLegacyLocalStorage();
 export { WordEditor } from './components/WordEditor';
 export type { WordEditorProps, WordEditorBrand, WordLocale } from './components/WordEditor';
 
+// 品牌切换：'doculuma' | 'eflink' 内置品牌，或传对象自定义
+export { builtinEditorBrand, resolveEditorBrandId, EDITOR_BRAND_IDS } from './brand';
+export type { EditorBrandId } from './brand';
+
 // 存储适配器
 export type { StorageAdapter } from './storage/types';
 export { indexedDbStorage } from './storage/indexedDb';

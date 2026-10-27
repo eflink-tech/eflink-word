@@ -1,5 +1,6 @@
 // AI 数据持久化（Dexie）：设置 / 会话历史 / 内置提示词模板
 import Dexie, { type Table } from 'dexie';
+import { isLegacyImportDone, markLegacyImportDone } from '@eflink-tech/office-kit';
 import { AI_INDEXEDDB_NAME } from '../storage/keys';
 import { importLegacyDb, LEGACY_AI_INDEXED_DB_NAME } from '../storage/legacy';
 import type { AISettings, Conversation, Template } from './types';
@@ -21,22 +22,40 @@ export class AIDb extends Dexie {
 
 export const aiDb = new AIDb();
 
-/** 表为空时导入旧库（eflink-word-ai）对应数据；只读旧库、失败静默、进程内只跑一次。 */
-async function importTableIfEmpty<T>(table: Table<T, string>, rows: unknown[] | undefined): Promise<void> {
-  if (!rows || rows.length === 0) return;
-  if ((await table.count()) > 0) return;
+/**
+ * 目标表非空则跳过（以新库为准）。
+ * 无论导入成功还是跳过（旧表无数据 / 新表非空）都落一次性标记：
+ * 否则用户删光对话后，下次启动空表判据再次命中，旧数据会"复活"且永远删不干净。
+ * bulkPut 单事务原子写入，失败不落标记，下个会话自然重试。
+ */
+async function importTableIfEmpty<T>(
+  table: Table<T, string>,
+  rows: unknown[] | undefined,
+  markerKey: string,
+): Promise<void> {
+  if (isLegacyImportDone(markerKey)) return;
+  if (!rows || rows.length === 0) {
+    markLegacyImportDone(markerKey);
+    return;
+  }
+  if ((await table.count()) > 0) {
+    markLegacyImportDone(markerKey);
+    return;
+  }
   await table.bulkPut(rows as T[]);
+  markLegacyImportDone(markerKey);
 }
 
+/** 表为空时导入旧库（eflink-word-ai）对应数据；只读旧库、失败静默、进程内只跑一次。 */
 export function ensureAiLegacyImport(): Promise<void> {
   return importLegacyDb(
     'ai',
     LEGACY_AI_INDEXED_DB_NAME,
     ['conversations', 'settings', 'templates'],
     async (rows) => {
-      await importTableIfEmpty(aiDb.conversations, rows.conversations);
-      await importTableIfEmpty(aiDb.settings, rows.settings);
-      await importTableIfEmpty(aiDb.templates, rows.templates);
+      await importTableIfEmpty(aiDb.conversations, rows.conversations, 'doculuma:word:legacy-ai-imported:conversations');
+      await importTableIfEmpty(aiDb.settings, rows.settings, 'doculuma:word:legacy-ai-imported:settings');
+      await importTableIfEmpty(aiDb.templates, rows.templates, 'doculuma:word:legacy-ai-imported:templates');
     },
   );
 }

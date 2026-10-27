@@ -1,12 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { WordEditor, useDocumentStore, type WordLocale } from '@eflink-tech/word';
+import {
+  WordEditor,
+  useDocumentStore,
+  builtinEditorBrand,
+  resolveEditorBrandId,
+  type EditorBrandId,
+  type WordLocale,
+} from '@eflink-tech/word';
 
 const LOCALES: { value: WordLocale; label: string }[] = [
   { value: 'zh-CN', label: '中文' },
   { value: 'en', label: 'English' },
   { value: 'es', label: 'Español' },
   { value: 'pt-BR', label: 'Português' },
+];
+
+const BRANDS: { value: EditorBrandId; label: string }[] = [
+  { value: 'doculuma', label: 'DocuLuma' },
+  { value: 'eflink', label: 'Eflink' },
 ];
 
 const UNTITLED: Record<WordLocale, string> = {
@@ -19,6 +31,11 @@ const UNTITLED: Record<WordLocale, string> = {
 function readLocale(): WordLocale {
   const value = new URLSearchParams(window.location.search).get('locale');
   return LOCALES.find((item) => item.value === value)?.value ?? 'zh-CN';
+}
+
+/** ?brand=eflink 直达指定品牌，便于逐品牌验收 */
+function readBrand(): EditorBrandId {
+  return resolveEditorBrandId(new URLSearchParams(window.location.search).get('brand'));
 }
 
 function LanguageSwitcher({
@@ -50,10 +67,14 @@ function LanguageSwitcher({
  */
 function EditorRoute({
   locale,
+  brand,
   onLocaleChange,
+  onBrandChange,
 }: {
   locale: WordLocale;
+  brand: EditorBrandId;
   onLocaleChange: (locale: WordLocale) => void;
+  onBrandChange: (brand: EditorBrandId) => void;
 }) {
   const { id: routeDocId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -100,10 +121,22 @@ function EditorRoute({
       <WordEditor
         docId={docId}
         locale={locale}
-        branding={{ logo: '/logo.png', name: 'DocuLuma Word' }}
+        branding={brand}
         guardUnload
         onDocIdChange={(id) => navigate(`/edit/${id}?locale=${locale}`)}
       />
+      <select
+        value={brand}
+        aria-label="Brand"
+        onChange={(e) => onBrandChange(e.target.value as EditorBrandId)}
+        className="fixed bottom-3 right-3 z-[100000] rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-[#1f2329] shadow-md outline-none"
+      >
+        {BRANDS.map((item) => (
+          <option key={item.value} value={item.value}>
+            {item.label}
+          </option>
+        ))}
+      </select>
       <LanguageSwitcher locale={locale} onChange={onLocaleChange} />
     </>
   );
@@ -112,6 +145,7 @@ function EditorRoute({
 // 无列表页：任何路由直接进入编辑器；"/" 打开最近编辑的文档
 function App() {
   const [locale, setLocale] = useState<WordLocale>(readLocale);
+  const [brand, setBrand] = useState<EditorBrandId>(readBrand);
 
   const handleLocaleChange = (next: WordLocale) => {
     const url = new URL(window.location.href);
@@ -120,15 +154,25 @@ function App() {
     setLocale(next);
   };
 
+  const handleBrandChange = (next: EditorBrandId) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('brand', next);
+    window.history.replaceState(null, '', url);
+    setBrand(next);
+  };
+
+  useEffect(() => {
+    document.title = builtinEditorBrand(brand).name;
+  }, [brand]);
+
+  const routeProps = { locale, brand, onLocaleChange: handleLocaleChange, onBrandChange: handleBrandChange };
+
   return (
     <Routes>
-      <Route path="/" element={<EditorRoute locale={locale} onLocaleChange={handleLocaleChange} />} />
-      <Route path="/edit" element={<EditorRoute locale={locale} onLocaleChange={handleLocaleChange} />} />
-      <Route
-        path="/edit/:id"
-        element={<EditorRoute locale={locale} onLocaleChange={handleLocaleChange} />}
-      />
-      <Route path="*" element={<EditorRoute locale={locale} onLocaleChange={handleLocaleChange} />} />
+      <Route path="/" element={<EditorRoute {...routeProps} />} />
+      <Route path="/edit" element={<EditorRoute {...routeProps} />} />
+      <Route path="/edit/:id" element={<EditorRoute {...routeProps} />} />
+      <Route path="*" element={<EditorRoute {...routeProps} />} />
     </Routes>
   );
 }

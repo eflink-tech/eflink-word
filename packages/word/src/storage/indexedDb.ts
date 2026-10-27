@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { isLegacyImportDone, markLegacyImportDone } from '@eflink-tech/office-kit';
 import { INDEXEDDB_DEFAULT_DB_NAME } from './keys';
 import { importLegacyDb, LEGACY_INDEXED_DB_NAME } from './legacy';
 import type { CanvasEditorData, DocumentMeta, WordDocument } from '../types/document';
@@ -37,16 +38,33 @@ class WordDB extends DexieBase {
   }
 }
 
+/** 一次性导入标记键：按「目标库名 + 表」各落一个 key（localStorage），导入成功或确定跳过后写入 */
+function legacyImportMarkerKey(dbName: string): string {
+  return `doculuma:word:legacy-imported:${dbName}:documents`;
+}
+
 /**
  * 旧库（eflink-word）一次性导入：仅当新库 documents 表为空时 bulkPut 旧数据；
  * 只读旧库、绝不删除；失败静默，不阻塞编辑器。按库名记忆化，进程内只跑一次。
+ * 无论导入成功还是「跳过」（旧库无数据 / 新表非空）都落一次性标记：
+ * 否则用户删光文档后，下次启动空表判据再次命中，旧数据会"复活"且永远删不干净。
+ * bulkPut 单事务原子写入，失败不落标记，下个会话自然重试。
  */
 function ensureLegacyImport(db: WordDB, dbName: string): Promise<void> {
+  const markerKey = legacyImportMarkerKey(dbName);
   return importLegacyDb(`documents:${dbName}`, LEGACY_INDEXED_DB_NAME, ['documents'], async (legacy) => {
+    if (isLegacyImportDone(markerKey)) return;
     const rows = (legacy.documents ?? []) as WordDocument[];
-    if (rows.length === 0) return;
-    if ((await db.documents.count()) > 0) return;
+    if (rows.length === 0) {
+      markLegacyImportDone(markerKey);
+      return;
+    }
+    if ((await db.documents.count()) > 0) {
+      markLegacyImportDone(markerKey);
+      return;
+    }
     await db.documents.bulkPut(rows);
+    markLegacyImportDone(markerKey);
   });
 }
 
@@ -84,7 +102,7 @@ export function indexedDbStorage(dbName = INDEXEDDB_DEFAULT_DB_NAME): StorageAda
       await db.documents.update(id, { title, content, updatedAt: Date.now() });
     },
     async clear() {
-      await ensureLegacyImport(db, dbName);
+      // 清空就是清空：绝不触发旧库导入，否则"清空"自带旧数据复活
       await db.documents.clear();
     },
   };

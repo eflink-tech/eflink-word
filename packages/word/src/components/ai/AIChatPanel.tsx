@@ -2,10 +2,11 @@
 // 交互模式与 eflink-pptx 的 AIChatPanel 保持一致
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, FileDown, History, Send, Settings, Sparkles, Trash2, Wand2, X } from 'lucide-react';
-import { useI18n } from '@eflink-tech/office-kit';
+import { resolveErrorMessage, useI18n } from '@eflink-tech/office-kit';
 import { useUIStore } from '../../store/uiStore';
 import { aiDb, aiSettingsStore, BUILTIN_TEMPLATES, ensureAiLegacyImport } from '../../ai/db';
-import { errorMessage, sendMessage, type ChatMessage } from '../../ai/aiService';
+import { sendMessage, type ChatMessage } from '../../ai/aiService';
+import { isAbortError } from '../../ai/types';
 import { buildDocPrompt, parseAIDocument } from '../../ai/systemPrompt';
 import {
   getDocumentText,
@@ -137,7 +138,9 @@ export function AIChatPanel() {
         },
       });
     } catch (error) {
-      setMessages([...next, { role: 'assistant', content: `⚠️ ${errorMessage(error)}` }]);
+      // 用户主动停止：保留已生成的部分内容，不追加报错消息
+      if (isAbortError(error)) return;
+      setMessages([...next, { role: 'assistant', content: `⚠️ ${resolveErrorMessage(error, t, 'word.ai.requestFailed')}` }]);
     } finally {
       setBusy(false);
       abortRef.current = null;
@@ -184,7 +187,7 @@ export function AIChatPanel() {
           },
         ]);
       } catch (error) {
-        setMessages([...next, { role: 'assistant', content: `⚠️ ${errorMessage(error)}` }]);
+        setMessages([...next, { role: 'assistant', content: `⚠️ ${resolveErrorMessage(error, t, 'word.ai.requestFailed')}` }]);
       } finally {
         setBusy(false);
       }
@@ -199,7 +202,7 @@ export function AIChatPanel() {
       setGenView(false);
       setMessages((prev) => [...prev, { role: 'assistant', content: t('word.ai.inserted') }]);
     } catch (error) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: `⚠️ ${error instanceof Error ? error.message : t('word.ai.insertFailed')}` }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: `⚠️ ${resolveErrorMessage(error, t, 'word.ai.insertFailed')}` }]);
     }
   };
 
@@ -225,7 +228,7 @@ export function AIChatPanel() {
       replaceSelectionWithText(lastAssistant.content);
       setMessages((prev) => [...prev, { role: 'assistant', content: t('word.ai.replaced') }]);
     } catch (error) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: `⚠️ ${error instanceof Error ? error.message : t('word.ai.replaceFailed')}` }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: `⚠️ ${resolveErrorMessage(error, t, 'word.ai.replaceFailed')}` }]);
     }
   };
 

@@ -5,6 +5,7 @@ import { saveAs } from 'file-saver';
 import type Editor from '@hufe921/canvas-editor';
 import { OfficeError, isOfficeError } from '@eflink-tech/office-kit';
 import { sanitizeExportBasename } from '../utils/exportImport';
+import { wordT } from '../../i18n/runtime';
 
 /** OLE2（CFB 复合文档）魔数，即旧版 .doc / .xls / .ppt 的文件头 */
 const OLE_SIGNATURE: readonly number[] = [
@@ -53,7 +54,7 @@ export async function importDocx(editor: Editor, file: File): Promise<void> {
 }
 
 /** 导出 docx 并触发浏览器下载 */
-export async function exportDocx(editor: Editor, filename = '未命名文档'): Promise<void> {
+export async function exportDocx(editor: Editor, filename = wordT('word.status.unnamed')): Promise<void> {
   const title = sanitizeExportBasename(filename);
   const { createDocxExporter } = await import('./exportDocx');
   const blob = await createDocxExporter(editor)({ fileName: title });

@@ -7,6 +7,7 @@ import { EditorMode, PageMode, PaperDirection } from '@hufe921/canvas-editor';
 import { jsPDF } from 'jspdf';
 import { saveAs } from 'file-saver';
 import { OfficeError } from '@eflink-tech/office-kit';
+import { wordT } from '../../i18n/runtime';
 
 export const EFWORD_FORMAT = 'efword' as const;
 export const EFWORD_VERSION = '1.0';
@@ -39,7 +40,8 @@ export function buildEfwordSource(): EfwordSource {
 
 export function sanitizeExportBasename(name: string): string {
   const trimmed = name.replace(/[\\/:*?"<>|]/g, '_').trim();
-  return trimmed || '未命名文档';
+  // 非 React 层拿不到 useI18n：经 runtime 的 wordT 取当前语言的默认文件名
+  return trimmed || wordT('word.status.unnamed');
 }
 
 export function buildEfwordFilename(title: string): string {
@@ -91,7 +93,7 @@ export interface ExportEfwordOptions {
  */
 export async function exportEfword(
   editor: Editor,
-  filename = '未命名文档',
+  filename = wordT('word.status.unnamed'),
   options: ExportEfwordOptions = {},
 ): Promise<void> {
   const title = sanitizeExportBasename(filename);
@@ -134,7 +136,7 @@ function yieldToMain(): Promise<void> {
 /**
  * 导出 PDF（与打印预览一致的 canvas 渲染）
  */
-export async function exportPdf(editor: Editor, filename = '未命名文档'): Promise<void> {
+export async function exportPdf(editor: Editor, filename = wordT('word.status.unnamed')): Promise<void> {
   const options = editor.command.getOptions();
   const { width, height, paperDirection, printPixelRatio, scale, pageMode } = options;
   const isLandscape = paperDirection === PaperDirection.HORIZONTAL;
@@ -196,7 +198,8 @@ function loadImageFromSrc(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('页面图片加载失败，无法导出图片'));
+    // 内部调试信息：UI 经 resolveErrorMessage 兜底为 word.error.imageExport
+    img.onerror = () => reject(new Error('page image failed to load'));
     img.src = src;
   });
 }
@@ -207,7 +210,7 @@ function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
       if (blob) {
         resolve(blob);
       } else {
-        reject(new Error('图片生成失败，请重试'));
+        reject(new Error('canvas.toBlob returned null'));
       }
     }, 'image/png');
   });
@@ -229,7 +232,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
  * - 单页：直接下载该页 PNG
  * - 多页：纵向拼接为一张白底长图（超出浏览器 canvas 上限时等比缩小）
  */
-export async function exportImage(editor: Editor, filename = '未命名文档'): Promise<void> {
+export async function exportImage(editor: Editor, filename = wordT('word.status.unnamed')): Promise<void> {
   const options = editor.command.getOptions();
   const { printPixelRatio, scale, pageMode } = options;
 
@@ -251,7 +254,7 @@ export async function exportImage(editor: Editor, filename = '未命名文档'):
     });
 
     if (!pages.length) {
-      throw new Error('文档为空，无法导出图片');
+      throw new OfficeError('word.error.imageEmpty', 'empty document for image export');
     }
 
     const name = `${sanitizeExportBasename(filename)}.png`;
@@ -278,7 +281,8 @@ export async function exportImage(editor: Editor, filename = '未命名文档'):
 
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-      throw new Error('无法创建画布，无法导出图片');
+      // 内部调试信息：UI 经 resolveErrorMessage 兜底为 word.error.imageExport
+      throw new Error('failed to acquire 2d canvas context');
     }
 
     ctx.fillStyle = '#ffffff';

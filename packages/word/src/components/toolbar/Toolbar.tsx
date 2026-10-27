@@ -22,7 +22,8 @@ import { ColorPicker } from './ColorPicker';
 import { WordIconButton, ToolbarDivider } from './ToolButton';
 import { useFormatPainter } from '../../hooks/useFormatPainter';
 import { useEditorStore } from '../../store/editorStore';
-import { useUIStore } from '../../store/uiStore';import {
+import { useUIStore } from '../../store/uiStore';
+import {
   WordUndoIcon,
   WordRedoIcon,
   WordFormatPaintIcon,

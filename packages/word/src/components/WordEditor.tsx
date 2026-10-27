@@ -20,6 +20,9 @@ import { getWordShareHandler } from '../core/share/shareBridge';
 import type { WordDocument } from '../types/document';
 import type { StorageAdapter } from '../storage/types';
 import { WORD_MESSAGES } from '../i18n/messages';
+import { setWordLocale } from '../i18n/runtime';
+import { builtinEditorBrand, type EditorBrandId } from '../brand';
+import type { OfficeHeaderBrand } from '@eflink-tech/office-kit';
 
 /** 编辑器界面语言；默认 zh-CN，与 DocuLuma 现有站点保持一致 */
 export type WordLocale = OfficeLocale;
@@ -37,8 +40,10 @@ export interface WordEditorProps {
   locale?: WordLocale;
   /** 文档存储实现；传入后注册为全局默认。缺省用内置 IndexedDB（库名 doculuma-word） */
   storage?: StorageAdapter;
-  /** 品牌区（logo + 产品名）；不传或传 false 隐藏 */
-  branding?: WordEditorBrand | false;
+  /**
+   * 品牌区：'doculuma' | 'eflink' 选内置品牌，传对象完全自定义，false 隐藏（默认）。
+   */
+  branding?: WordEditorBrand | false | EditorBrandId;
   /** 是否显示工具栏（默认显示） */
   showToolbar?: boolean;
   /** 是否显示左侧目录（默认显示；窄屏自动折叠为悬浮标签） */
@@ -55,7 +60,18 @@ export interface WordEditorProps {
   onDocError?: (err: unknown) => void;
 }
 
+/** 品牌参数归一：字符串选内置品牌，对象原样使用，false 隐藏 */
+function resolveBranding(
+  branding: WordEditorBrand | false | EditorBrandId,
+): OfficeHeaderBrand | false {
+  if (branding === false) return false;
+  if (branding === 'eflink' || branding === 'doculuma') return builtinEditorBrand(branding);
+  return branding;
+}
+
 export function WordEditor({ locale = 'zh-CN', ...props }: WordEditorProps) {
+  // 非 React 模块（store / AI / 导入导出）读取同一份语言
+  setWordLocale(locale);
   return (
     <I18nProvider locale={locale} messages={WORD_MESSAGES}>
       <WordEditorInner {...props} />
@@ -188,9 +204,11 @@ function WordEditorInner({
     return () => clearTimeout(timer);
   }, [isDirty, editor, contentVersion]);
 
-  // 注册 window bridge：宿主可在路由跳转/离页前查询脏状态、触发保存或丢弃本地草稿
+  // 注册 window bridge：宿主可在路由跳转/离页前查询脏状态、触发保存或丢弃本地草稿。
+  // __eflinkEditorBridge 是旧宿主的过渡期别名（同一对象），确认宿主全部改用新名后移除。
   useEffect(() => {
-    (window as unknown as Record<string, unknown>).__doculumaEditorBridge = {
+    const bridgeRoot = window as unknown as Record<string, unknown>;
+    bridgeRoot.__doculumaEditorBridge = {
       isDirty: () => useEditorStore.getState().isDirty,
       save: () => useEditorStore.getState().save(),
       discard: () => {
@@ -199,8 +217,10 @@ function WordEditorInner({
         if (docId) removeDraft(docId);
       },
     };
+    bridgeRoot.__eflinkEditorBridge = bridgeRoot.__doculumaEditorBridge;
     return () => {
-      delete (window as unknown as Record<string, unknown>).__doculumaEditorBridge;
+      delete bridgeRoot.__doculumaEditorBridge;
+      delete bridgeRoot.__eflinkEditorBridge;
     };
   }, []);
 
@@ -245,7 +265,8 @@ function WordEditorInner({
     );
   }
 
-  const hasTopRow = Boolean(branding) || showToolbar;
+  const resolvedBranding = resolveBranding(branding);
+  const hasTopRow = Boolean(resolvedBranding) || showToolbar;
 
   const showShare = getWordShareHandler() !== null;
   const headerActions = showShare ? (
@@ -277,7 +298,7 @@ function WordEditorInner({
       {hasTopRow && (
         <WordMenuBar
           editor={editor}
-          brand={branding}
+          brand={resolvedBranding}
           showMenus={showToolbar}
           actions={headerActions}
         />

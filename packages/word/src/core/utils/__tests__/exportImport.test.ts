@@ -272,7 +272,9 @@ describe('exportImport', () => {
 
     it('无页面时抛错', async () => {
       const editor = makeEditor({ pageImages: [] });
-      await expect(exportImage(editor, 'empty')).rejects.toThrow('文档为空');
+      await expect(exportImage(editor, 'empty')).rejects.toMatchObject({
+        code: 'word.error.imageEmpty',
+      });
     });
 
     it('导出前后恢复 pageMode / pageScale', async () => {

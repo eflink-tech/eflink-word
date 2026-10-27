@@ -2,6 +2,7 @@
 import { ElementType, ListType, TitleLevel } from '@hufe921/canvas-editor';
 import type Editor from '@hufe921/canvas-editor';
 import type { IElement } from '@hufe921/canvas-editor';
+import { OfficeError } from '@eflink-tech/office-kit';
 import { useEditorStore } from '../store/editorStore';
 import type { AIDocElement, AIDocument } from './types';
 
@@ -100,7 +101,7 @@ function getEditor() {
  */
 export function insertAIDocument(doc: AIDocument): number {
   const editor = getEditor();
-  if (!editor) throw new Error('编辑器尚未就绪');
+  if (!editor) throw new OfficeError('word.editor.notReady', 'editor not ready');
   const elements = buildElements(doc);
   if (!elements.length) return 0;
   const { has } = rangeInfo(editor);
@@ -122,7 +123,7 @@ export function insertAIDocument(doc: AIDocument): number {
 /** 用纯文本结果替换当前选区（无选区时插入光标处）；多段落拆为多个文本元素 */
 export function replaceSelectionWithText(text: string): void {
   const editor = getEditor();
-  if (!editor) throw new Error('编辑器尚未就绪');
+  if (!editor) throw new OfficeError('word.editor.notReady', 'editor not ready');
   const paragraphs = text
     .split(/\n+/)
     .map((p) => p.trim())
