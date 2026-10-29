@@ -657,6 +657,9 @@ interface PprProps {
   numId?: string
   ilvl?: number
   outlineLvl?: number
+  pageBreakBefore?: boolean
+  before?: number
+  after?: number
 }
 
 function parsePpr(pPr: Element | null): PprProps {
@@ -680,6 +683,13 @@ function parsePpr(pPr: Element | null): PprProps {
       props.line = line
       props.lineRule = spacing.getAttribute('w:lineRule') || 'auto'
     }
+    const before = parseDocxNumber(spacing.getAttribute('w:before'))
+    const after = parseDocxNumber(spacing.getAttribute('w:after'))
+    if (before) props.before = before
+    if (after) props.after = after
+  }
+  if (pPr.getElementsByTagName('w:pageBreakBefore').length) {
+    props.pageBreakBefore = true
   }
   const ind = pPr.getElementsByTagName('w:ind')[0]
   if (ind) {
@@ -902,6 +912,12 @@ class DocxParser {
     string,
     { dataUrl: string; size: { width: number; height: number } | null }
   >()
+  // 纸张几何（96dpi px），浮动图片绝对定位换算用
+  private pageGeometry: {
+    width: number
+    height: number
+    margins: [number, number, number, number]
+  } | null = null
   // document.xml 的关系缓存（页眉/页脚/图片引用解析共用）
   private documentRels: {
     internal: Map<string, string>
@@ -957,7 +973,7 @@ class DocxParser {
       width: ((pageSetupRecord.width as number) || 794) * 0.95,
       height: ((pageSetupRecord.height as number) || 1123) * 0.95
     }
-    const main = body ? this.parseBlockContainer(body, ctx) : []
+    const main = body ? this.parseBlockContainer(body, ctx, true) : []
     main.push(...this.buildNotesSection())
     // 页眉页脚：取 body 级 sectPr（最后一个）的 default 引用
     const emptyZone: {
@@ -1046,6 +1062,14 @@ class DocxParser {
       const left = twipToPx(parseDocxNumber(pgMar.getAttribute('w:left')))
       if (top && right && bottom && left) {
         setup.margins = [top, right, bottom, left]
+      }
+    }
+    // 供浮动图片绝对定位换算（parseDrawing 期间使用）
+    if (setup.width && setup.height && Array.isArray(setup.margins)) {
+      this.pageGeometry = {
+        width: setup.width as number,
+        height: setup.height as number,
+        margins: setup.margins as [number, number, number, number]
       }
     }
     // 文档默认字体/字号（新输入内容跟随）：优先 Normal 默认段落样式（docDefaults 常无字号）
@@ -1539,7 +1563,8 @@ class DocxParser {
   // 遍历块级容器（body / 页眉页脚根 / 单元格）的直属子节点
   private parseBlockContainer(
     container: Element,
-    ctx: ZoneContext
+    ctx: ZoneContext,
+    mainFlow = false
   ): IElement[] {
     const elementList: IElement[] = []
     // 上一段落遗留的行尾换行：列表/表格/分隔线自带断行时省略，避免空行
@@ -1552,7 +1577,11 @@ class DocxParser {
     }
     for (const child of expandWrappers(container)) {
       if (child.tagName === 'w:p') {
-        const { elements, trailingBreak } = this.parseParagraph(child, ctx)
+        const { elements, trailingBreak } = this.parseParagraph(
+          child,
+          ctx,
+          mainFlow && elementList.length === 0
+        )
         flushBreak(
           elements[0]?.type === ElementType.LIST ||
             elements[0]?.type === ElementType.TABLE ||
@@ -1576,7 +1605,7 @@ class DocxParser {
             el => el.tagName === 'w:sdtContent'
           )
           if (sdtContent) {
-            const elements = this.parseBlockContainer(sdtContent, ctx)
+            const elements = this.parseBlockContainer(sdtContent, ctx, mainFlow)
             flushBreak(
               elements[0]?.type === ElementType.LIST ||
                 elements[0]?.type === ElementType.TABLE
@@ -1625,6 +1654,23 @@ class DocxParser {
         continue
       }
       result.push(element)
+      // 分页符前的行尾换行：零行距（Word/LO 中该换行不可见，避免换行撑出空白页）
+      if (element.type === ElementType.PAGE_BREAK && result.length > 1) {
+        const prev = result[result.length - 2]
+        if (prev?.type === ElementType.TEXT && prev.value?.endsWith('\n')) {
+          prev.value = prev.value.replace(/\n+$/, '')
+          if (prev.value) {
+            result.splice(result.length - 1, 0, {
+              ...prev,
+              value: '\n',
+              rowMargin: 0
+            })
+          } else {
+            prev.value = '\n'
+            prev.rowMargin = 0
+          }
+        }
+      }
       // 规则1：标题后补换行
       if (element.type !== ElementType.TITLE) continue
       if (!next) continue
@@ -1647,7 +1693,8 @@ class DocxParser {
   // 由上层根据下一个块级元素类型决定是否补（列表/表格自带断行时省略）
   private parseParagraph(
     p: Element,
-    ctx: ZoneContext
+    ctx: ZoneContext,
+    isFlowStart = false
   ): { elements: IElement[]; trailingBreak: boolean } {
     const pPr = p.getElementsByTagName('w:pPr')[0] || null
     const pStyleId =
@@ -1669,10 +1716,12 @@ class DocxParser {
         ? TITLE_LEVELS[mergedPpr.outlineLvl]
         : undefined)
 
-    const prefix: IElement[] = pPr?.getElementsByTagName('w:pageBreakBefore')
-      .length
-      ? [{ value: '', type: ElementType.PAGE_BREAK }]
-      : []
+    // 样式链继承的 pageBreakBefore（Heading1 等）也要分页；
+    // 正文流首段 Word/LO 不产生分页（页首同样丢弃段前间距）
+    const prefix: IElement[] =
+      !isFlowStart && mergedPpr.pageBreakBefore
+        ? [{ value: '', type: ElementType.PAGE_BREAK, hide: true }]
+        : []
     // 分节符：仅显式分页类型（nextPage 等）在段落末尾产生分页；
     // 未声明 type 的分节（Word 视作 nextPage，LibreOffice 不分页）跟随 LibreOffice
     const sectionBreakType =
@@ -1685,7 +1734,7 @@ class DocxParser {
       ['nextPage', 'oddPage', 'evenPage', 'nextColumn'].includes(
         sectionBreakType ?? ''
       )
-        ? [{ value: '', type: ElementType.PAGE_BREAK }]
+        ? [{ value: '', type: ElementType.PAGE_BREAK, hide: true }]
         : []
 
     // 段落底边框的空段落 -> 分隔线（Word"下框线"）
@@ -1711,6 +1760,20 @@ class DocxParser {
     // 无显式行距段落的回退：按文档默认段落行距换算（与表格行高地板同一口径）
     const paragraphRowMargin =
       props.rowMargin ?? this.fallbackRowMargin(fontSize)
+    // 段前/段后间距：附加到段首/段尾元素的行高。
+    // 页首（正文流首段或 pageBreakBefore 之后）Word/LO 丢弃段前间距
+    const beforeExtra = this.paragraphSpacingRowMargin(
+      isFlowStart || mergedPpr.pageBreakBefore ? 0 : mergedPpr.before || 0,
+      fontSize
+    )
+    const afterExtra = this.paragraphSpacingRowMargin(
+      mergedPpr.after || 0,
+      fontSize
+    )
+    const withSpacing = (element: IElement, extra: number): IElement =>
+      extra > 0
+        ? { ...element, rowMargin: round2((element.rowMargin ?? 1) + extra) }
+        : element
 
     // 列表段落：官方壳结构（valueList 扁平流：行首 \n + 内容，项间单换行）
     const numId = mergedPpr.numId
@@ -1742,6 +1805,13 @@ class DocxParser {
             valueList.push(withRowMargin(element))
           }
         }
+        if (beforeExtra > 0)
+          valueList[0] = withSpacing(valueList[0], beforeExtra)
+        if (afterExtra > 0)
+          valueList[valueList.length - 1] = withSpacing(
+            valueList[valueList.length - 1],
+            afterExtra
+          )
         return {
           elements: [
             ...prefix,
@@ -1792,6 +1862,15 @@ class DocxParser {
             paragraphRowMargin
           )
         )
+      if (valueList.length) {
+        if (beforeExtra > 0)
+          valueList[0] = withSpacing(valueList[0], beforeExtra)
+        if (afterExtra > 0)
+          valueList[valueList.length - 1] = withSpacing(
+            valueList[valueList.length - 1],
+            afterExtra
+          )
+      }
       return {
         elements: [
           ...prefix,
@@ -1832,19 +1911,34 @@ class DocxParser {
     const lineElements: IElement[] = indentedInline.map(element =>
       this.applyParagraphStyle(element, props.rowFlex, paragraphRowMargin)
     )
+    if (lineElements.length) {
+      if (beforeExtra > 0)
+        lineElements[0] = withSpacing(lineElements[0], beforeExtra)
+      if (afterExtra > 0)
+        lineElements[lineElements.length - 1] = withSpacing(
+          lineElements[lineElements.length - 1],
+          afterExtra
+        )
+    }
     if (!lineElements.length) {
       // \n 为行结束标记，不携带 rowFlex（编辑器断行时 \n 归入下一行，
       // 携带对齐会污染下一行的行首对齐）
       return {
         elements: [
           ...prefix,
-          {
-            value: '\n',
-            type: ElementType.TEXT,
-            ...(paragraphRowMargin !== undefined
-              ? { rowMargin: paragraphRowMargin }
-              : {})
-          },
+          withSpacing(
+            withSpacing(
+              {
+                value: '\n',
+                type: ElementType.TEXT,
+                ...(paragraphRowMargin !== undefined
+                  ? { rowMargin: paragraphRowMargin }
+                  : {})
+              },
+              beforeExtra
+            ),
+            afterExtra
+          ),
           ...suffix
         ],
         trailingBreak: false
@@ -2002,6 +2096,19 @@ class DocxParser {
     const { ascent, descent } = measureFontMetrics(undefined, size)
     const glyphPx = ascent + descent
     return round2(Math.max((lineHeightPx - glyphPx) / (2 * 8 * ratio), 0.5))
+  }
+
+  // 段前/段后间距（twips）→ rowMargin 增量（与 spacingRowMargin 同一分母口径）
+  private paragraphSpacingRowMargin(twips: number, fontSize: number): number {
+    if (twips <= 0) return 0
+    const size = fontSize || 16
+    let ratio = 1
+    if (size < 12) {
+      ratio = size / 12
+    } else if (size > 30) {
+      ratio = 1 + (size - 30) / 30
+    }
+    return round2(twips / TWIP_PER_PX / (2 * 8 * ratio))
   }
 
   private parseParagraphProps(
@@ -2268,7 +2375,7 @@ class DocxParser {
         elements.push(...makeText(child.textContent || ''))
       } else if (tag === 'w:br') {
         if (child.getAttribute('w:type') === 'page') {
-          elements.push({ value: '', type: ElementType.PAGE_BREAK })
+          elements.push({ value: '', type: ElementType.PAGE_BREAK, hide: true })
         } else {
           appendLineBreak(elements, style)
         }
@@ -2568,8 +2675,82 @@ class DocxParser {
         anchor.getElementsByTagName('wp:wrapThrough').length)
     ) {
       image.imgDisplay = ImageDisplay.SURROUND
+      const fp = this.computeFloatPosition(anchor, image.width ?? 0, image.height ?? 0)
+      if (fp) image.imgFloatPosition = fp as never
     }
     return image
+  }
+
+  // wp:anchor 的 posH/posV -> 页面相对坐标（96dpi px，未乘缩放）。
+  // 水平：margin/page/column 基准 + align(left/center/right) 或 posOffset；
+  // 垂直：margin/page 基准 + align(top/bottom/center) 或 posOffset，
+  // paragraph/line 基准为锚点行相对偏移（rowRelativeY，布局期由补丁叠加行顶坐标）。
+  // 不支持的基准（character 等）返回 null，回退到锚点行自动定位。
+  private computeFloatPosition(
+    anchor: Element,
+    imgWidth: number,
+    imgHeight: number
+  ): { x: number; y: number; rowRelativeY?: boolean } | null {
+    const geometry = this.pageGeometry
+    if (!geometry) return null
+    const { width, height, margins } = geometry
+    const [top, right, bottom, left] = margins
+    const textWidth = Math.max(width - left - right, 0)
+    const textHeight = Math.max(height - top - bottom, 0)
+    const positionH = anchor.getElementsByTagName('wp:positionH')[0]
+    const positionV = anchor.getElementsByTagName('wp:positionV')[0]
+    if (!positionH || !positionV) return null
+    const posOffset = (pos: Element): number =>
+      emuToPx(Number(pos.getElementsByTagName('wp:posOffset')[0]?.textContent || 0))
+    const hBase = positionH.getAttribute('relativeFrom') || ''
+    const hAlign = positionH.getElementsByTagName('wp:align')[0]?.textContent || ''
+    const vBase = positionV.getAttribute('relativeFrom') || ''
+    const vAlign = positionV.getElementsByTagName('wp:align')[0]?.textContent || ''
+
+    let x: number | null = null
+    if (['leftMargin', 'insideMargin', 'outsideMargin'].includes(hBase)) {
+      x = hAlign === 'right' ? left - imgWidth : left + posOffset(positionH)
+    } else if (['margin', 'column'].includes(hBase)) {
+      if (hAlign === 'left') x = left + posOffset(positionH)
+      else if (hAlign === 'right') x = width - right - imgWidth + posOffset(positionH)
+      else if (hAlign === 'center')
+        x = left + (textWidth - imgWidth) / 2 + posOffset(positionH)
+      else x = left + posOffset(positionH)
+    } else if (hBase === 'page') {
+      if (hAlign === 'left') x = posOffset(positionH)
+      else if (hAlign === 'right') x = width - imgWidth + posOffset(positionH)
+      else if (hAlign === 'center') x = (width - imgWidth) / 2 + posOffset(positionH)
+      else x = posOffset(positionH)
+    } else if (hBase === 'rightMargin') {
+      x = hAlign === 'left' ? width - right : width - right - imgWidth + posOffset(positionH)
+    } else {
+      return null
+    }
+
+    let y: number
+    let rowRelativeY = false
+    if (vBase === 'paragraph' || vBase === 'line') {
+      y = posOffset(positionV)
+      rowRelativeY = true
+    } else if (['margin', 'column'].includes(vBase)) {
+      if (vAlign === 'top') y = top + posOffset(positionV)
+      else if (vAlign === 'bottom') y = height - bottom - imgHeight + posOffset(positionV)
+      else if (vAlign === 'center')
+        y = top + (textHeight - imgHeight) / 2 + posOffset(positionV)
+      else y = top + posOffset(positionV)
+    } else if (vBase === 'page') {
+      if (vAlign === 'top') y = posOffset(positionV)
+      else if (vAlign === 'bottom') y = height - imgHeight + posOffset(positionV)
+      else if (vAlign === 'center') y = (height - imgHeight) / 2 + posOffset(positionV)
+      else y = posOffset(positionV)
+    } else if (vBase === 'topMargin') {
+      y = top + posOffset(positionV)
+    } else if (vBase === 'bottomMargin') {
+      y = height - bottom - imgHeight + posOffset(positionV)
+    } else {
+      return null
+    }
+    return { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, ...(rowRelativeY ? { rowRelativeY } : {}) }
   }
 
   // 表格：tblGrid 列宽、行高、合并（gridSpan/vMerge）、边框、底纹、垂直对齐

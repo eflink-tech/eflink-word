@@ -1,5 +1,5 @@
 diff --git a/dist/canvas-editor.js b/dist/canvas-editor.js
-index cb52eef6147a01c75146b94cacf54d14cd5c1af6..2e6507373b810580b35b4ceef8f6169bcb62073b 100644
+index cb52eef6147a01c75146b94cacf54d14cd5c1af6..a6f82990b3fe4425fc0d37dc8fdd0f6d767b7c77 100644
 --- a/dist/canvas-editor.js
 +++ b/dist/canvas-editor.js
 @@ -4497,7 +4497,10 @@ function vn(e) {
@@ -14,6 +14,15 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..2e6507373b810580b35b4ceef8f6169b
  	let o = 0;
  	for (; o < e.length;) {
  		let n = e[o];
+@@ -4512,7 +4515,7 @@ function yn(e, t) {
+ 				let t = n.titleId || M(), a = i.title;
+ 				for (let i = 0; i < r.length; i++) {
+ 					let s = r[i];
+-					s.title = n.title, n.hint && !s.hint && (s.hint = n.hint), n.level && (s.titleId = t, s.level = n.level), Tn(s) && (s.size ||= a[Ct[s.level]], s.bold === void 0 && (s.bold = !0)), e.splice(o, 0, s), o++;
++					s.title = n.title, n.hint && !s.hint && (s.hint = n.hint), n.level && (s.titleId = t, s.level = n.level), Tn(s) && (s.size ||= a[Ct[s.level]], s.bold === void 0 && (s.bold = !0)), n.rowFlex && !s.rowFlex && (s.rowFlex = n.rowFlex), e.splice(o, 0, s), o++;
+ 				}
+ 			}
+ 			o--;
 @@ -4563,7 +4566,7 @@ function yn(e, t) {
  			}
  			o--;
@@ -33,33 +42,64 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..2e6507373b810580b35b4ceef8f6169b
  						}), !r.value[0].size && r.value[1]?.size && Tn(r.value[1]) && (r.value[0].size = r.value[1].size);
  						for (let t = 0; t < r.value.length; t++) {
  							let n = r.value[t];
-@@ -8090,7 +8094,7 @@ var Jr = { dragover: qr }, Yr = class {
+@@ -7639,6 +7643,7 @@ var Jr = { dragover: qr }, Yr = class {
+ 							pageNo: i
+ 						};
+ 					}
++					a.imgFloatPosition && (a.imgFloatPosition.pageNo = i);
+ 					this.floatPositionList.push({
+ 						pageNo: i,
+ 						element: a,
+@@ -8088,9 +8093,9 @@ var Jr = { dragover: qr }, Yr = class {
+ 	}
+ 	setSurroundPosition(e) {
  		let { scale: t } = this.options, { pageNo: n, row: r, rowElement: i, rowElementRect: a, surroundElementList: o, availableWidth: s } = e, c = a.x, l = 0;
- 		if (o.length && !Rn(i) && !i.control?.minWidth) for (let e = 0; e < o.length; e++) {
+-		if (o.length && !Rn(i) && !i.control?.minWidth) for (let e = 0; e < o.length; e++) {
++		if (o.length && r.rowFlex !== "center" && !Rn(i) && !i.control?.minWidth) for (let e = 0; e < o.length; e++) {
  			let u = o[e], d = u.imgFloatPosition;
 -			if (d.pageNo !== n) continue;
 +			if (!d || d.pageNo !== n) continue;
  			let f = {
  				...d,
  				x: d.x * t,
-@@ -17368,7 +17372,7 @@ var to = class {
+@@ -17368,7 +17373,7 @@ var to = class {
  				surroundElementList: d
  			});
  			E = ae.x, V += ae.rowIncreaseWidth, E += l.width;
 -			let oe = s.type === H.SEPARATOR || s.type === H.TABLE || B?.type === H.TABLE || B?.type === H.BLOCK || s.type === H.BLOCK || B?.type === H.PAGE_BREAK || B?.imgDisplay === r.INLINE || s.imgDisplay === r.INLINE || B?.listId !== s.listId || B?.areaId !== s.areaId && !(s.area?.hide && !this.isAreaHideDisabled()) || s.control?.flexDirection === a.COLUMN && (s.controlComponent === K.CHECKBOX || s.controlComponent === K.RADIO) && B?.controlComponent === K.VALUE || e !== 0 && s.value === "​" && !(s.area?.hide && !this.isAreaHideDisabled()), se = V > L, ce = oe || se;
-+			let oe = s.type === H.SEPARATOR || s.type === H.TABLE || B?.type === H.TABLE || B?.type === H.BLOCK || s.type === H.BLOCK || B?.type === H.PAGE_BREAK || B?.imgDisplay === r.INLINE || s.imgDisplay === r.INLINE || s.imgDisplay === r.SURROUND && !s.imgFloatPosition || B?.listId !== s.listId || B?.areaId !== s.areaId && !(s.area?.hide && !this.isAreaHideDisabled()) || s.control?.flexDirection === a.COLUMN && (s.controlComponent === K.CHECKBOX || s.controlComponent === K.RADIO) && B?.controlComponent === K.VALUE || e !== 0 && s.value === "​" && !(s.area?.hide && !this.isAreaHideDisabled()), se = V > L, ce = oe || se;
++			let oe = s.type === H.PAGE_BREAK || s.type === H.SEPARATOR || s.type === H.TABLE || B?.type === H.TABLE || B?.type === H.BLOCK || s.type === H.BLOCK || B?.type === H.PAGE_BREAK || B?.imgDisplay === r.INLINE || s.imgDisplay === r.INLINE || s.imgDisplay === r.SURROUND || B?.listId !== s.listId || B?.areaId !== s.areaId && !(s.area?.hide && !this.isAreaHideDisabled()) || s.control?.flexDirection === a.COLUMN && (s.controlComponent === K.CHECKBOX || s.controlComponent === K.RADIO) && B?.controlComponent === K.VALUE || e !== 0 && s.value === "​" && !(s.area?.hide && !this.isAreaHideDisabled()), se = V > L, ce = oe || se;
  			if (ce) {
  				let r = {
  					width: l.width,
-@@ -17416,6 +17420,11 @@ var to = class {
+@@ -17416,6 +17421,22 @@ var to = class {
  					(D - ee + n + R > N || e) && (!e && T && w && I < w.count - 1 ? (I += 1, D = ee, E = M + (w.offsets[I] || 0)) : (Vn(d, O), O += 1, I = 0, ee = A[0] + this.getHeader().getExtraHeight(O), D = ee, E = M + (w && w.offsets[0] || 0)));
  				}
  				let n = C[C.length - 1];
-+				z.imgDisplay === r.SURROUND && !z.imgFloatPosition && (z.imgFloatPosition = {
-+					x: E / p,
-+					y: D / p,
-+					pageNo: O
-+				});
++				if (z.imgDisplay === r.SURROUND) {
++					let f = z.imgFloatPosition;
++					if (!f) {
++						z.imgFloatPosition = {
++							x: E / p,
++							y: D / p,
++							pageNo: O
++						};
++					} else if (f.pageNo === void 0) {
++						f.pageNo = O;
++						if (f.rowRelativeY) {
++							f.y += D / p;
++							delete f.rowRelativeY;
++						}
++					}
++				}
  				n && T && n.columnIndex !== void 0 && (n.columnIndex = I), z.left = 0, E = this.position.setSurroundPosition({
  					pageNo: O,
  					rowElement: z,
+@@ -20813,7 +20834,7 @@ var Js = class {
+ 			footer: s,
+ 			graffiti: c
+ 		}, this.listener, this.eventBus, this.override);
+-		this.command = new so(new Fo(l)), this.macro = new Gs(this.command);
++		 this.command = new so(new Fo(l)), this.macro = new Gs(this.command);
+ 		let u = new Rs(l, this.command), d = new Hs(l, this.command);
+ 		this.register = new Lo({
+ 			contextMenu: u,
