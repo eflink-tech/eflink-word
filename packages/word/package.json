@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@eflink-tech/office-kit": "workspace:*",
-    "@hufe921/canvas-editor": "^1.0.2",
+    "@hufe921/canvas-editor": "1.0.2",
     "color": "^5.0.3",
     "dexie": "^4.0.0",
     "docx": "^9.7.1",

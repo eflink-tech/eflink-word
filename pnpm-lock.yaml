@@ -85,7 +85,7 @@ importers:
         specifier: workspace:*
         version: link:../office-kit
       '@hufe921/canvas-editor':
-        specifier: ^1.0.2
+        specifier: 1.0.2
         version: 1.0.2(patch_hash=638772d2a06d24d330331e4ea4543a292f611c21b873d53ff2c6a1110eec8fd1)
       color:
         specifier: ^5.0.3
