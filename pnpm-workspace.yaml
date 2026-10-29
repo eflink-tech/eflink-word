@@ -1,3 +1,6 @@
 packages:
   - packages/*
   - apps/*
+
+patchedDependencies:
+  '@hufe921/canvas-editor@1.0.2': patches/@hufe921__canvas-editor@1.0.2.patch

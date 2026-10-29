@@ -18,7 +18,7 @@ const ROOT_RELS = `${XML_DECL}
 const STYLES = `${XML_DECL}<w:styles xmlns:w="${W_NS}"/>`;
 
 function documentXml(body: string): string {
-  return `${XML_DECL}<w:document xmlns:w="${W_NS}"><w:body>${body}</w:body></w:document>`;
+  return `${XML_DECL}<w:document xmlns:w="${W_NS}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}</w:body></w:document>`;
 }
 
 /** 普通文本 run；rPrInner 为空时不输出 rPr */
@@ -41,11 +41,31 @@ export function boldRunXml(text: string): string {
 
 /** 组装最小可解析 docx，返回 ArrayBuffer */
 export async function buildDocx(body: string): Promise<ArrayBuffer> {
+  return buildDocxPackage({ body });
+}
+
+/** 组装带附加部件的 docx（styles/numbering/footnotes/header/footer 等） */
+export async function buildDocxPackage(options: {
+  body: string;
+  /** word/ 目录下的附加 XML 文件（如 footnotes.xml、header1.xml） */
+  wordFiles?: Record<string, string>;
+  /** word/_rels/document.xml.rels 内容 */
+  documentRels?: string;
+}): Promise<ArrayBuffer> {
   const zip = new JSZip();
   zip.file('[Content_Types].xml', CONTENT_TYPES);
   zip.folder('_rels')!.file('.rels', ROOT_RELS);
   const word = zip.folder('word')!;
-  word.file('document.xml', documentXml(body));
+  word.file('document.xml', documentXml(options.body));
   word.file('styles.xml', STYLES);
+  for (const [path, content] of Object.entries(options.wordFiles || {})) {
+    word.file(path, content);
+  }
+  if (options.documentRels) {
+    word.folder('_rels')!.file('document.xml.rels', options.documentRels);
+  }
   return zip.generateAsync({ type: 'arraybuffer' });
 }
+
+export const W_NS_DECL = `xmlns:w="${W_NS}"`;
+export { XML_DECL };

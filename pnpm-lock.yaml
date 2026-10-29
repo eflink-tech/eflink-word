@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@hufe921/canvas-editor@1.0.2':
+    hash: 3db9d2fea5d4af82e9baa3280b4e7a073e3606f1fc01fa099ae6244dbe558acb
+    path: patches/@hufe921__canvas-editor@1.0.2.patch
+
 importers:
 
   .:
@@ -81,7 +86,7 @@ importers:
         version: link:../office-kit
       '@hufe921/canvas-editor':
         specifier: ^1.0.2
-        version: 1.0.2
+        version: 1.0.2(patch_hash=3db9d2fea5d4af82e9baa3280b4e7a073e3606f1fc01fa099ae6244dbe558acb)
       color:
         specifier: ^5.0.3
         version: 5.0.3
@@ -2036,7 +2041,7 @@ snapshots:
 
   '@exodus/bytes@1.15.1': {}
 
-  '@hufe921/canvas-editor@1.0.2': {}
+  '@hufe921/canvas-editor@1.0.2(patch_hash=3db9d2fea5d4af82e9baa3280b4e7a073e3606f1fc01fa099ae6244dbe558acb)': {}
 
   '@inquirer/external-editor@1.0.3(@types/node@25.9.7)':
     dependencies:
