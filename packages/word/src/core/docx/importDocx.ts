@@ -1842,7 +1842,11 @@ class DocxParser {
       this.defaultParagraphStyle?.size ||
       this.defaultRunStyle.size ||
       16
-    const props = this.parseParagraphProps(mergedPpr, fontSize)
+    // 表格单元格按字体自然行高（等线 1.36em）；正文沿用统一口径，避免改变
+    // 既有文档的分页
+    const lineEm =
+      ctx.width !== undefined ? this.paragraphLineEm(inline, pStyleId) : 1.22
+    const props = this.parseParagraphProps(mergedPpr, fontSize, lineEm)
     // 段前/段后间距：页首（正文流首段或 pageBreakBefore 之后）Word/LO 丢弃段前间距
     const beforeExtra = this.paragraphSpacingRowMargin(
       isFlowStart || mergedPpr.pageBreakBefore ? 0 : mergedPpr.before || 0,
@@ -1855,7 +1859,7 @@ class DocxParser {
     // 编辑器没有段落间距属性，rowMargin 会作用于段落的每一行。把段前/段后
     // 间距按估算行数摊到各行，段落总高与 Word 一致，避免逐行加倍撑高
     const baseRowMargin =
-      props.rowMargin ?? this.fallbackRowMargin(fontSize) ?? 0
+      props.rowMargin ?? this.fallbackRowMargin(fontSize, lineEm) ?? 0
     const spacingExtra =
       beforeExtra + afterExtra > 0
         ? round2(
@@ -2239,10 +2243,15 @@ class DocxParser {
 
   // 行距换算（编辑器行高 = 字面高 + 上下各 basicRowMarginHeight × 字号系数 × rowMargin，
   // 字面高按“中”字盒（≈1em）计，与编辑器 measureBasisWord 一致）：
-  // auto：Word 行高 = 自然行高（≈1.22em）× line/240，反推 rowMargin；
+  // auto：Word 行高 = 自然行高（字体 line gap，默认 ≈1.22em）× line/240，反推 rowMargin；
   // exact/atLeast：固定行高，反推倍数 = (行高px − 字面高px) / (2 × 8 × 字号系数)，
   // 保证与导出侧（行高 px → atLeast twip）往返一致
-  private spacingRowMargin(line: number, lineRule: string, fontSize: number): number {
+  private spacingRowMargin(
+    line: number,
+    lineRule: string,
+    fontSize: number,
+    lineEm = 1.22
+  ): number {
     const size = fontSize || 16
     let ratio = 1
     if (size < 12) {
@@ -2251,8 +2260,9 @@ class DocxParser {
       ratio = 1 + (size - 30) / 30
     }
     if (lineRule === 'auto') {
-      // 自然行高 ≈ 1.22em（Calibri/Times 等常见字体的 line gap 均值）
-      const targetPx = (size * 1.22 * line) / 240
+      // 自然行高默认 ≈1.22em（Calibri/Times 等常见字体的 line gap 均值）；
+      // 等线/DengXian 的 line gap ≈1.36em（11pt 单倍行距 15pt）
+      const targetPx = (size * lineEm * line) / 240
       const glyphPx = size
       return round2(Math.max((targetPx - glyphPx) / (2 * 8 * ratio), 0))
     }
@@ -2277,7 +2287,8 @@ class DocxParser {
 
   private parseParagraphProps(
     pPr: PprProps,
-    fontSize?: number
+    fontSize?: number,
+    lineEm = 1.22
   ): {
     rowFlex?: RowFlex
     rowMargin?: number
@@ -2287,25 +2298,52 @@ class DocxParser {
     const line = pPr.line || 0
     const lineRule = pPr.lineRule || 'auto'
     if (line && line > 0) {
-      props.rowMargin = this.spacingRowMargin(line, lineRule, fontSize || 16)
+      props.rowMargin = this.spacingRowMargin(
+        line,
+        lineRule,
+        fontSize || 16,
+        lineEm
+      )
     }
     return props
   }
 
+  // 字体自然行高（em）：等线/DengXian 的行 gap 明显大于西文字体，Word 按
+  // 字体度量计算单倍行距，导入时按段落字体选自然行高才能对齐 Word 分页
+  private paragraphLineEm(inline: IElement[], pStyleId?: string): number {
+    const font =
+      inline.find(element => element.font)?.font ||
+      fontOf(
+        (pStyleId ? this.styleRPrById.get(pStyleId) : undefined) ||
+          this.defaultParagraphStyle ||
+          this.defaultRunStyle
+      ) ||
+      ''
+    return /等线|DengXian/i.test(font) ? 1.36 : 1.22
+  }
+
   // 文档默认段落行距 -> 编辑器行距倍数：无显式行距的段落（列表/标题）按
   // 默认行距渲染，与正文、表格行高地板同一口径
-  private fallbackRowMargin(fontSize: number): number | undefined {
+  private fallbackRowMargin(
+    fontSize: number,
+    lineEm = 1.22
+  ): number | undefined {
     const defaults = mergePpr(
       this.defaultPpr,
       this.defaultParagraphPpr || undefined
     )
     const line = defaults?.line ?? 0
     if (!line || line <= 0) {
-      // 文档未声明默认行距时 Word 按单倍行距（≈1.22em）排版；编辑器默认
+      // 文档未声明默认行距时 Word 按单倍行距排版；编辑器默认
       // rowMargin=1 行高约 2em，会把无行距段落撑高导致分页与 Word 不一致
-      return this.spacingRowMargin(240, 'auto', fontSize)
+      return this.spacingRowMargin(240, 'auto', fontSize, lineEm)
     }
-    return this.spacingRowMargin(line, defaults?.lineRule ?? 'auto', fontSize)
+    return this.spacingRowMargin(
+      line,
+      defaults?.lineRule ?? 'auto',
+      fontSize,
+      lineEm
+    )
   }
 
   // 有序列表续号：Word 可能用多个 numId + 递增 w:start 拼一条序列，

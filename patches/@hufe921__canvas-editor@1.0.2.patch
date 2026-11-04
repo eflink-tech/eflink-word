@@ -1,5 +1,5 @@
 diff --git a/dist/canvas-editor.js b/dist/canvas-editor.js
-index cb52eef6147a01c75146b94cacf54d14cd5c1af6..a6f82990b3fe4425fc0d37dc8fdd0f6d767b7c77 100644
+index cb52eef6147a01c75146b94cacf54d14cd5c1af6..c94ca1ce974bb6696cefeb3351e7889381d71774 100644
 --- a/dist/canvas-editor.js
 +++ b/dist/canvas-editor.js
 @@ -4497,7 +4497,10 @@ function vn(e) {
@@ -62,7 +62,15 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..a6f82990b3fe4425fc0d37dc8fdd0f6d
  			let f = {
  				...d,
  				x: d.x * t,
-@@ -17368,7 +17373,7 @@ var to = class {
+@@ -9580,6 +9585,7 @@ var ui = class extends ni {
+ 				for (let n of C) n.rowIndex < e && n.rowIndex + n.rowspan > e && t.push(n);
+ 				return t;
+ 			}, { table: { tdPadding: E }, defaultSize: D } = this.options, O = E[0] + E[2] + D, k = (e, n, r) => {
++				if (m[e].height * t + x <= this.draw.getMainOuterHeight(0, this.options.paperDirection)) return { fit: 0, hasRemaining: !1, consumedHeight: 0 };
+ 				let i = S[e], a = 0, o = !1, s = 0;
+ 				for (let c of T(e)) {
+ 					let e = Math.min(c.height, i + n - c.y), l = Math.max(0, r - c.y);
+@@ -17368,7 +17374,7 @@ var to = class {
  				surroundElementList: d
  			});
  			E = ae.x, V += ae.rowIncreaseWidth, E += l.width;
@@ -71,7 +79,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..a6f82990b3fe4425fc0d37dc8fdd0f6d
  			if (ce) {
  				let r = {
  					width: l.width,
-@@ -17416,6 +17421,22 @@ var to = class {
+@@ -17416,6 +17422,22 @@ var to = class {
  					(D - ee + n + R > N || e) && (!e && T && w && I < w.count - 1 ? (I += 1, D = ee, E = M + (w.offsets[I] || 0)) : (Vn(d, O), O += 1, I = 0, ee = A[0] + this.getHeader().getExtraHeight(O), D = ee, E = M + (w && w.offsets[0] || 0)));
  				}
  				let n = C[C.length - 1];
@@ -94,7 +102,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..a6f82990b3fe4425fc0d37dc8fdd0f6d
  				n && T && n.columnIndex !== void 0 && (n.columnIndex = I), z.left = 0, E = this.position.setSurroundPosition({
  					pageNo: O,
  					rowElement: z,
-@@ -20813,7 +20834,7 @@ var Js = class {
+@@ -20813,7 +20835,7 @@ var Js = class {
  			footer: s,
  			graffiti: c
  		}, this.listener, this.eventBus, this.override);
