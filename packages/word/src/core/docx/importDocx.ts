@@ -21,7 +21,7 @@ import {
 import JSZip from 'jszip'
 import { OfficeError } from '@eflink-tech/office-kit'
 import { wordT } from '../../i18n/runtime'
-import { measureFontMetrics, parseDocxNumber } from './docxUtils'
+import { getMeasureContext, measureFontMetrics, parseDocxNumber } from './docxUtils'
 import { DEFAULT_TABLE_ROW_MIN_HEIGHT } from '../canvas-editor/editor-instance'
 
 declare module '@hufe921/canvas-editor' {
@@ -63,20 +63,13 @@ function halfPointToPx(halfPoint: number): number {
 }
 
 // 文本宽度测量（目录点线引导用）：canvas 不可用时按 CJK 全角/西文半角估算
-let textMeasureContext: CanvasRenderingContext2D | null | undefined
 function measureTextWidth(
   text: string,
   font: string | undefined,
   size: number
 ): number {
   if (!text) return 0
-  if (textMeasureContext === undefined) {
-    try {
-      textMeasureContext = document.createElement('canvas').getContext('2d')
-    } catch {
-      textMeasureContext = null
-    }
-  }
+  const textMeasureContext = getMeasureContext()
   let width = 0
   if (textMeasureContext) {
     textMeasureContext.font = `${size}px ${font || 'sans-serif'}`
@@ -607,14 +600,33 @@ function splitTrailingBreaks(elementList: IElement[]): void {
       element.value.length > 1 &&
       element.value.endsWith('\n')
     ) {
+      const breaks = element.value.match(/\n+$/)?.[0].length ?? 1
       element.value = element.value.replace(/\n+$/, '')
-      elementList.splice(i + 1, 0, {
-        value: '\n',
-        type: ElementType.TEXT,
-        size: 1,
-        rowMargin: 0
-      })
-      i += 1
+      const insertAt = i + 1
+      if (!element.value) {
+        elementList.splice(i, 1)
+        i -= 1
+      }
+      for (let n = 0; n < breaks; n++) {
+        // 换行元素会成为下一行的起始行，最后一个换行用中性小字号，
+        // 避免段落尾行撑高下一段首行；它前面的换行（Word 中的连续
+        // <w:br/>）保留原字号，才能撑出真正的空行高度
+        elementList.splice(
+          insertAt + n,
+          0,
+          n === breaks - 1
+            ? { value: '\n', type: ElementType.TEXT, size: 1, rowMargin: 0 }
+            : {
+                value: '\n',
+                type: ElementType.TEXT,
+                ...(element.size ? { size: element.size } : {}),
+                ...(element.rowMargin !== undefined
+                  ? { rowMargin: element.rowMargin }
+                  : {})
+              }
+        )
+      }
+      i += breaks
     }
   }
 }
@@ -861,7 +873,17 @@ function bulletStyleOf(lvl: Element): ListStyle {
   ) {
     return ListStyle.SQUARE
   }
+  if (text === '•' || text === '\u2022') return ListStyle.DISC
+  // 编辑器只内置 •/◦/▫ 三种符号；其它项目符号（如 □、➢）按原字形渲染
+  if ([...text].length === 1) return text as unknown as ListStyle
   return ListStyle.DISC
+}
+
+// 列表标记颜色（numbering.xml 的 lvl/rPr/color，Word 里编号常用主题蓝）
+function listMarkerColor(lvl: Element): string | undefined {
+  const rPr = lvl.getElementsByTagName('w:rPr')[0]
+  const color = rPr?.getElementsByTagName('w:color')[0]?.getAttribute('w:val')
+  return color ? `#${color.toUpperCase()}` : undefined
 }
 
 // 展开 OOXML 包装节点：修订插入/移动目标/自定义 XML 视为普通内容，
@@ -932,6 +954,14 @@ function resolveField(frame: FieldFrame) {
   frame.kind = 'other'
 }
 
+interface ListLevelInfo {
+  listType: ListType
+  listStyle: ListStyle
+  start?: number
+  // 标记颜色（numbering.xml 的 lvl/rPr/color）
+  color?: string
+}
+
 // ====================================================================
 // OOXML -> 编辑器元素 解析器
 // =====================================================================
@@ -944,10 +974,7 @@ class DocxParser {
   private pprByStyleId = new Map<string, PprProps>()
   private tableBordersByStyleId = new Map<string, TableBorders>()
   // numId -> 每级列表类型（null = 该级无编号标记，按普通段落处理）
-  private listTypeByNumId = new Map<
-    string,
-    ({ listType: ListType; listStyle?: ListStyle; start?: number } | null)[]
-  >()
+  private listTypeByNumId = new Map<string, (ListLevelInfo | null)[]>()
   // 有序列表续号：Word 常用多个 numId + 递增的 w:start 拼出一条序列
   // （每个段落各自成"列表"），编辑器按 listId 计数编号，需归并到同一条
   private orderedListRun: {
@@ -1328,10 +1355,7 @@ class DocxParser {
       await numberingFile.async('text'),
       'application/xml'
     )
-    const levelListByAbstractId = new Map<
-      string,
-      ({ listType: ListType; listStyle?: ListStyle; start?: number } | null)[]
-    >()
+    const levelListByAbstractId = new Map<string, (ListLevelInfo | null)[]>()
     for (const abstractNum of Array.from(
       dom.getElementsByTagName('w:abstractNum')
     )) {
@@ -1339,11 +1363,7 @@ class DocxParser {
       const lvlElements = elementChildren(abstractNum).filter(
         child => child.tagName === 'w:lvl'
       )
-      const levels: ({
-        listType: ListType
-        listStyle?: ListStyle
-        start?: number
-      } | null)[] = []
+      const levels: (ListLevelInfo | null)[] = []
       for (const lvl of lvlElements) {
         const numFmt = lvl
           .getElementsByTagName('w:numFmt')[0]
@@ -1355,13 +1375,19 @@ class DocxParser {
         const start = parseDocxNumber(
           lvl.getElementsByTagName('w:start')[0]?.getAttribute('w:val')
         )
+        const color = listMarkerColor(lvl)
         if (numFmt === 'bullet') {
-          levels.push({ listType: ListType.UL, listStyle: bulletStyleOf(lvl) })
+          levels.push({
+            listType: ListType.UL,
+            listStyle: bulletStyleOf(lvl),
+            ...(color ? { color } : {})
+          })
         } else {
           levels.push({
             listType: ListType.OL,
             listStyle: ListStyle.DECIMAL,
-            ...(start ? { start } : {})
+            ...(start ? { start } : {}),
+            ...(color ? { color } : {})
           })
         }
       }
@@ -1880,12 +1906,14 @@ class DocxParser {
       const levels = this.listTypeByNumId.get(numId)
       const levelInfo = levels?.[ilvl] ?? levels?.[levels.length - 1] ?? null
       if (levelInfo) {
-        const { listType: type, listStyle } = levelInfo
+        const { listType: type, listStyle, color } = levelInfo
         const start = levelInfo.start ?? 1
         const listId = this.resolveListId(numId, type, ilvl, start)
         const withRowMargin = (element: IElement): IElement =>
           this.applyParagraphStyle(element, undefined, paragraphRowMargin)
-        const valueList: IElement[] = [withRowMargin({ value: '\n' })]
+        const valueList: IElement[] = [
+          withRowMargin({ value: '\n', ...(color ? { color } : {}) })
+        ]
         for (const element of inline) {
           // 项内软换行拆为独立 \n 并标记 listWrap（避免被识别为新列表项）
           if (

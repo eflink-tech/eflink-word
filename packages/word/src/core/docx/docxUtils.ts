@@ -23,6 +23,27 @@ export function parseDocxNumber(value: string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+// Chromium 对未挂载到文档的 canvas 会忽略大部分字体族（只认默认字体），
+// 量出的宽度与挂载后实际绘制不一致，依赖这些宽度的换行/分页就会错位。
+// 统一用挂在 body 上的隐藏 canvas 测量，保证与编辑器绘制同源。
+let measureCanvas: HTMLCanvasElement | null | undefined
+export function getMeasureContext(): CanvasRenderingContext2D | null {
+  if (measureCanvas === undefined) {
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = 8
+      canvas.height = 8
+      canvas.style.cssText =
+        'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none'
+      ;(document.body || document.documentElement).appendChild(canvas)
+      measureCanvas = canvas
+    } catch {
+      measureCanvas = null
+    }
+  }
+  return measureCanvas ? measureCanvas.getContext('2d') : null
+}
+
 // 字体字面高度（canvas measureText('中')，导入导出与编辑器渲染同源）
 const fontMetricsCache = new Map<string, { ascent: number; descent: number }>()
 export function measureFontMetrics(
@@ -34,7 +55,7 @@ export function measureFontMetrics(
   if (cached) return cached
   let metrics = { ascent: size * 0.86, descent: size * 0.14 }
   try {
-    const ctx = document.createElement('canvas').getContext('2d')
+    const ctx = getMeasureContext()
     if (ctx) {
       ctx.font = `${size}px ${font || 'sans-serif'}`
       const m = ctx.measureText('中')
@@ -64,7 +85,7 @@ export function measureTextWidth(
   if (cached !== undefined) return cached
   let width = text.length * size
   try {
-    const ctx = document.createElement('canvas').getContext('2d')
+    const ctx = getMeasureContext()
     if (ctx) {
       ctx.font = `${size}px ${font || 'sans-serif'}`
       width = ctx.measureText(text).width || width

@@ -1,5 +1,5 @@
 diff --git a/dist/canvas-editor.js b/dist/canvas-editor.js
-index cb52eef6147a01c75146b94cacf54d14cd5c1af6..c94ca1ce974bb6696cefeb3351e7889381d71774 100644
+index cb52eef6147a01c75146b94cacf54d14cd5c1af6..f00eb428f7350fad437b30ada471d320450a8cea 100644
 --- a/dist/canvas-editor.js
 +++ b/dist/canvas-editor.js
 @@ -4497,7 +4497,10 @@ function vn(e) {
@@ -70,7 +70,48 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..c94ca1ce974bb6696cefeb3351e78893
  				let i = S[e], a = 0, o = !1, s = 0;
  				for (let c of T(e)) {
  					let e = Math.min(c.height, i + n - c.y), l = Math.max(0, r - c.y);
-@@ -17368,7 +17374,7 @@ var to = class {
+@@ -15187,10 +15193,10 @@ var Aa = class {
+ 					ht.CIRCLE,
+ 					ht.SQUARE
+ 				], r = n[e % n.length];
+-				t = yt[e === 0 ? s.listStyle || ht.DISC : r] || yt[ht.DISC];
++				t = yt[e === 0 ? s.listStyle || ht.DISC : r] || (e === 0 && s.listStyle ? s.listStyle : yt[ht.DISC]);
+ 			} else t = `${a + 1}${Z.PERIOD}`;
+ 			if (!t) return;
+-			e.save(), e.font = this.getListFontStyle(r, u), e.fillText(t, m, h), e.restore();
++			e.save(), e.font = this.getListFontStyle(r, u), s.color && (e.fillStyle = s.color), e.fillText(t, m, h), e.restore();
+ 		}
+ 	}
+ }, Wa = class e {
+@@ -15964,7 +15970,12 @@ var Qa = class {
+ 		this.range.setRange(n, n), this.draw.render({ isCompute: !1 });
+ 	}
+ 	_measureTdContentWidth(e) {
+-		let t = document.createElement("canvas").getContext("2d"), n = this.draw.getTextParticle(), r = 0, i = 0;
++		let t = globalThis.__EF_MEASURE_CTX__ || (globalThis.__EF_MEASURE_CTX__ = (() => {
++			const cv = document.createElement("canvas");
++			cv.width = 8, cv.height = 8, cv.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none";
++			(document.body || document.documentElement).appendChild(cv);
++			return cv.getContext("2d");
++		})()), n = this.draw.getTextParticle(), r = 0, i = 0;
+ 		for (let a = 0; a < e.value.length; a++) {
+ 			let o = e.value[a];
+ 			if (o.value === "​") {
+@@ -17191,7 +17202,12 @@ var to = class {
+ 		return a < 12 ? o = a / 12 : a > 30 && (o = 1 + (a - 30) / 30), n * o * (e.rowMargin ?? r) * i;
+ 	}
+ 	computeRowList(e) {
+-		let { innerWidth: t, elementList: n, isPagingMode: i = !1, isFromTable: o = !1, startX: s = 0, startY: c = 0, pageHeight: l = 0, surroundElementList: d = [] } = e, { defaultSize: f, scale: p, imgCaption: m, table: { tdPadding: h, defaultColMinWidth: g, overflow: v }, defaultTabWidth: y } = this.options, b = this.getDefaultBasicRowMarginHeight(), x = document.createElement("canvas").getContext("2d");
++		let { innerWidth: t, elementList: n, isPagingMode: i = !1, isFromTable: o = !1, startX: s = 0, startY: c = 0, pageHeight: l = 0, surroundElementList: d = [] } = e, { defaultSize: f, scale: p, imgCaption: m, table: { tdPadding: h, defaultColMinWidth: g, overflow: v }, defaultTabWidth: y } = this.options, b = this.getDefaultBasicRowMarginHeight(), x = globalThis.__EF_MEASURE_CTX__ || (globalThis.__EF_MEASURE_CTX__ = (() => {
++			const cv = document.createElement("canvas");
++			cv.width = 8, cv.height = 8, cv.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none";
++			(document.body || document.documentElement).appendChild(cv);
++			return cv.getContext("2d");
++		})());
+ 		if (this.controlMinWidthPlaceholderElementListSet.has(n)) {
+ 			for (let e = n.length - 1; e >= 0; e--) n[e].isControlMinWidthPlaceholder && n.splice(e, 1);
+ 			this.controlMinWidthPlaceholderElementListSet.delete(n);
+@@ -17368,7 +17384,7 @@ var to = class {
  				surroundElementList: d
  			});
  			E = ae.x, V += ae.rowIncreaseWidth, E += l.width;
@@ -79,7 +120,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..c94ca1ce974bb6696cefeb3351e78893
  			if (ce) {
  				let r = {
  					width: l.width,
-@@ -17416,6 +17422,22 @@ var to = class {
+@@ -17416,6 +17432,22 @@ var to = class {
  					(D - ee + n + R > N || e) && (!e && T && w && I < w.count - 1 ? (I += 1, D = ee, E = M + (w.offsets[I] || 0)) : (Vn(d, O), O += 1, I = 0, ee = A[0] + this.getHeader().getExtraHeight(O), D = ee, E = M + (w && w.offsets[0] || 0)));
  				}
  				let n = C[C.length - 1];
@@ -102,7 +143,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..c94ca1ce974bb6696cefeb3351e78893
  				n && T && n.columnIndex !== void 0 && (n.columnIndex = I), z.left = 0, E = this.position.setSurroundPosition({
  					pageNo: O,
  					rowElement: z,
-@@ -20813,7 +20835,7 @@ var Js = class {
+@@ -20813,7 +20845,7 @@ var Js = class {
  			footer: s,
  			graffiti: c
  		}, this.listener, this.eventBus, this.override);
