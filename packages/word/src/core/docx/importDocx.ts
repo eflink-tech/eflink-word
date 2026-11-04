@@ -1870,8 +1870,9 @@ class DocxParser {
       16
     // 行高按段落字体自然 em：等线/DengXian 的 line gap 明显大于西文字体，
     // 用统一 1.22em 会让等线正文行高偏矮，与 Word 分页逐渐错开
+    const font = this.paragraphFont(inline, pStyleId)
     const lineEm = this.paragraphLineEm(inline, pStyleId)
-    const props = this.parseParagraphProps(mergedPpr, fontSize, lineEm)
+    const props = this.parseParagraphProps(mergedPpr, fontSize, lineEm, font)
     // 段前/段后间距：页首（正文流首段或 pageBreakBefore 之后）Word/LO 丢弃段前间距
     const beforeExtra = this.paragraphSpacingRowMargin(
       isFlowStart || mergedPpr.pageBreakBefore ? 0 : mergedPpr.before || 0,
@@ -1884,12 +1885,13 @@ class DocxParser {
     // 编辑器没有段落间距属性，rowMargin 会作用于段落的每一行。把段间距按
     // 估算行数摊到各行；相邻段只取段前/段后较大的一边（Word 渲染时两段
     // 之间的空隙是同一份间距，叠加会让每个段落边界多出约 5px）
+    const spacingTotal = Math.max(beforeExtra, afterExtra)
     const baseRowMargin =
-      props.rowMargin ?? this.fallbackRowMargin(fontSize, lineEm) ?? 0
+      props.rowMargin ?? this.fallbackRowMargin(fontSize, lineEm, font) ?? 0
     const spacingExtra =
-      Math.max(beforeExtra, afterExtra) > 0
+      spacingTotal > 0
         ? round2(
-            Math.max(beforeExtra, afterExtra) /
+            spacingTotal /
               this.estimateParagraphLines(
                 inline,
                 fontSize,
@@ -2278,7 +2280,8 @@ class DocxParser {
     line: number,
     lineRule: string,
     fontSize: number,
-    lineEm = 1.22
+    lineEm = 1.22,
+    font?: string
   ): number {
     const size = fontSize || 16
     let ratio = 1
@@ -2291,11 +2294,14 @@ class DocxParser {
       // 自然行高默认 ≈1.22em（Calibri/Times 等常见字体的 line gap 均值）；
       // 等线/DengXian 的 line gap ≈1.36em（11pt 单倍行距 15pt）
       const targetPx = (size * lineEm * line) / 240
-      const glyphPx = size
+      // 编辑器行高 = 字面盒（ascent + descent）+ 上下 rowMargin，字面盒
+      // 通常比字号大 1~3px，直接按字号算会多出这段高度
+      const { ascent, descent } = measureFontMetrics(font, size)
+      const glyphPx = ascent + descent
       return round2(Math.max((targetPx - glyphPx) / (2 * 8 * ratio), 0))
     }
     const lineHeightPx = line / TWIP_PER_PX
-    const { ascent, descent } = measureFontMetrics(undefined, size)
+    const { ascent, descent } = measureFontMetrics(font, size)
     const glyphPx = ascent + descent
     return round2(Math.max((lineHeightPx - glyphPx) / (2 * 8 * ratio), 0.5))
   }
@@ -2316,7 +2322,8 @@ class DocxParser {
   private parseParagraphProps(
     pPr: PprProps,
     fontSize?: number,
-    lineEm = 1.22
+    lineEm = 1.22,
+    font?: string
   ): {
     rowFlex?: RowFlex
     rowMargin?: number
@@ -2330,16 +2337,16 @@ class DocxParser {
         line,
         lineRule,
         fontSize || 16,
-        lineEm
+        lineEm,
+        font
       )
     }
     return props
   }
 
-  // 字体自然行高（em）：等线/DengXian 的行 gap 明显大于西文字体，Word 按
-  // 字体度量计算单倍行距，导入时按段落字体选自然行高才能对齐 Word 分页
-  private paragraphLineEm(inline: IElement[], pStyleId?: string): number {
-    const font =
+  // 段落字体（行高、字面盒测量都依赖它）
+  private paragraphFont(inline: IElement[], pStyleId?: string): string {
+    return (
       inline.find(element => element.font)?.font ||
       fontOf(
         (pStyleId ? this.styleRPrById.get(pStyleId) : undefined) ||
@@ -2347,14 +2354,23 @@ class DocxParser {
           this.defaultRunStyle
       ) ||
       ''
-    return /等线|DengXian/i.test(font) ? 1.36 : 1.22
+    )
+  }
+
+  // 字体自然行高（em）：等线/DengXian 的行 gap 明显大于西文字体，Word 按
+  // 字体度量计算单倍行距，导入时按段落字体选自然行高才能对齐 Word 分页
+  private paragraphLineEm(inline: IElement[], pStyleId?: string): number {
+    return /等线|DengXian/i.test(this.paragraphFont(inline, pStyleId))
+      ? 1.36
+      : 1.22
   }
 
   // 文档默认段落行距 -> 编辑器行距倍数：无显式行距的段落（列表/标题）按
   // 默认行距渲染，与正文、表格行高地板同一口径
   private fallbackRowMargin(
     fontSize: number,
-    lineEm = 1.22
+    lineEm = 1.22,
+    font?: string
   ): number | undefined {
     const defaults = mergePpr(
       this.defaultPpr,
@@ -2364,13 +2380,14 @@ class DocxParser {
     if (!line || line <= 0) {
       // 文档未声明默认行距时 Word 按单倍行距排版；编辑器默认
       // rowMargin=1 行高约 2em，会把无行距段落撑高导致分页与 Word 不一致
-      return this.spacingRowMargin(240, 'auto', fontSize, lineEm)
+      return this.spacingRowMargin(240, 'auto', fontSize, lineEm, font)
     }
     return this.spacingRowMargin(
       line,
       defaults?.lineRule ?? 'auto',
       fontSize,
-      lineEm
+      lineEm,
+      font
     )
   }
 
