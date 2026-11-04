@@ -1868,10 +1868,9 @@ class DocxParser {
       this.defaultParagraphStyle?.size ||
       this.defaultRunStyle.size ||
       16
-    // 表格单元格按字体自然行高（等线 1.36em）；正文沿用统一口径，避免改变
-    // 既有文档的分页
-    const lineEm =
-      ctx.width !== undefined ? this.paragraphLineEm(inline, pStyleId) : 1.22
+    // 行高按段落字体自然 em：等线/DengXian 的 line gap 明显大于西文字体，
+    // 用统一 1.22em 会让等线正文行高偏矮，与 Word 分页逐渐错开
+    const lineEm = this.paragraphLineEm(inline, pStyleId)
     const props = this.parseParagraphProps(mergedPpr, fontSize, lineEm)
     // 段前/段后间距：页首（正文流首段或 pageBreakBefore 之后）Word/LO 丢弃段前间距
     const beforeExtra = this.paragraphSpacingRowMargin(
@@ -1882,14 +1881,15 @@ class DocxParser {
       mergedPpr.after || 0,
       fontSize
     )
-    // 编辑器没有段落间距属性，rowMargin 会作用于段落的每一行。把段前/段后
-    // 间距按估算行数摊到各行，段落总高与 Word 一致，避免逐行加倍撑高
+    // 编辑器没有段落间距属性，rowMargin 会作用于段落的每一行。把段间距按
+    // 估算行数摊到各行；相邻段只取段前/段后较大的一边（Word 渲染时两段
+    // 之间的空隙是同一份间距，叠加会让每个段落边界多出约 5px）
     const baseRowMargin =
       props.rowMargin ?? this.fallbackRowMargin(fontSize, lineEm) ?? 0
     const spacingExtra =
-      beforeExtra + afterExtra > 0
+      Math.max(beforeExtra, afterExtra) > 0
         ? round2(
-            (beforeExtra + afterExtra) /
+            Math.max(beforeExtra, afterExtra) /
               this.estimateParagraphLines(
                 inline,
                 fontSize,
