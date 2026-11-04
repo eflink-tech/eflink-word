@@ -62,6 +62,34 @@ function halfPointToPx(halfPoint: number): number {
   return Math.round((halfPoint * 2) / 3)
 }
 
+// 文本宽度测量（目录点线引导用）：canvas 不可用时按 CJK 全角/西文半角估算
+let textMeasureContext: CanvasRenderingContext2D | null | undefined
+function measureTextWidth(
+  text: string,
+  font: string | undefined,
+  size: number
+): number {
+  if (!text) return 0
+  if (textMeasureContext === undefined) {
+    try {
+      textMeasureContext = document.createElement('canvas').getContext('2d')
+    } catch {
+      textMeasureContext = null
+    }
+  }
+  let width = 0
+  if (textMeasureContext) {
+    textMeasureContext.font = `${size}px ${font || 'sans-serif'}`
+    width = textMeasureContext.measureText(text).width
+  }
+  if (!width) {
+    for (const char of text) {
+      width += char.charCodeAt(0) > 255 ? size : size * 0.5
+    }
+  }
+  return width
+}
+
 // docx 命名高亮色 -> hex
 const HIGHLIGHT_COLORS: Record<string, string> = {
   yellow: '#FFFF00',
@@ -1838,7 +1866,12 @@ class DocxParser {
       return {
         elements: [
           ...prefix,
-          ...this.parseTocEntry(inline, tocLevel, props.rowFlex),
+          ...this.parseTocEntry(
+            inline,
+            tocLevel,
+            props.rowFlex,
+            this.tocRightTabPx(pPr)
+          ),
           ...suffix
         ],
         trailingBreak: false
@@ -1968,45 +2001,143 @@ class DocxParser {
 
   // 目录条目规整化：编辑器不支持段落缩进与制表符点线，目录原样导入会
   // 层级混乱、页码位置乱跳——层级用全角空格缩进、统一文档默认字号、
-  // 制表符退化为空格分隔
+  // 页码按右制表位补点线引导
   private parseTocEntry(
     inline: IElement[],
     tocLevel: number,
-    rowFlex?: RowFlex
+    rowFlex?: RowFlex,
+    rightTabPx?: number
   ): IElement[] {
     const defaultSize =
       this.defaultParagraphStyle?.size || this.defaultRunStyle.size
-    const cleaned = inline.flatMap(element => {
+    // 目录条目通常由 HYPERLINK \l 书签 域包裹；编辑器没有书签锚点能力，
+    // 且嵌套在 valueList 里的字号/制表符不会被下面的规整逻辑处理
+    const flatten = (list: IElement[]): IElement[] =>
+      list.flatMap(element =>
+        element.type === ElementType.HYPERLINK && element.valueList?.length
+          ? flatten(element.valueList)
+          : [element]
+      )
+    const normalize = (element: IElement): IElement[] => {
       if (element.type === ElementType.TAB) {
         return [{ value: '  ', type: ElementType.TEXT }]
       }
       const { size, ...rest } = element
       void size
       return [{ ...rest, ...(defaultSize ? { size: defaultSize } : {}) }]
-    })
-    const indent = '\u3000'.repeat((tocLevel - 1) * 2)
-    if (indent) {
-      if (cleaned.length && cleaned[0].type === ElementType.TEXT) {
-        cleaned[0].value = `${indent}${cleaned[0].value || ''}`
-      } else {
-        cleaned.unshift({ value: indent, type: ElementType.TEXT })
+    }
+    const flat = flatten(inline)
+    // 末个制表符之后为页码（PAGEREF 域结果）
+    let tabIndex = -1
+    for (let i = flat.length - 1; i >= 0; i--) {
+      if (flat[i].type === ElementType.TAB) {
+        tabIndex = i
+        break
       }
     }
-    if (!cleaned.length) {
+    const content = (tabIndex >= 0 ? flat.slice(0, tabIndex) : flat)
+      .flatMap(normalize)
+      .map(element =>
+        element.type === ElementType.TEXT && element.value !== undefined
+          ? { ...element, value: element.value.replace(/\n/g, '') }
+          : element
+      )
+    const pageRuns = (tabIndex >= 0 ? flat.slice(tabIndex + 1) : []).flatMap(
+      normalize
+    )
+    const pageText = pageRuns
+      .filter(element => element.type === ElementType.TEXT)
+      .map(element => element.value || '')
+      .join('')
+      .replace(/\n/g, '')
+      .trim()
+    const indent = '\u3000'.repeat((tocLevel - 1) * 2)
+    if (indent) {
+      if (content.length && content[0].type === ElementType.TEXT) {
+        content[0] = {
+          ...content[0],
+          value: `${indent}${content[0].value || ''}`
+        }
+      } else {
+        content.unshift({ value: indent, type: ElementType.TEXT })
+      }
+    }
+    const elements: IElement[] = [...content]
+    if (pageText && pageRuns.length) {
+      const leader = this.buildTocLeader(content, pageRuns, rightTabPx)
+      elements.push(
+        leader ?? { value: '  ', type: ElementType.TEXT },
+        ...pageRuns
+      )
+    }
+    if (!elements.length) {
       return [{ value: '\n', type: ElementType.TEXT, rowMargin: 0 }]
     }
-    const lastClean = cleaned[cleaned.length - 1]
+    const lastClean = elements[elements.length - 1]
     if (lastClean.type === ElementType.TEXT && lastClean.value !== undefined) {
       lastClean.value = lastClean.value.endsWith('\n')
         ? lastClean.value
         : `${lastClean.value}\n`
     } else {
-      cleaned.push({ value: '\n', type: ElementType.TEXT, rowMargin: 0 })
+      elements.push({ value: '\n', type: ElementType.TEXT, rowMargin: 0 })
     }
-    return cleaned.map(element => ({
+    return elements.map(element => ({
       ...element,
       ...(rowFlex && !element.rowFlex ? { rowFlex } : {})
     }))
+  }
+
+  // 目录右制表位：优先段落直接格式（w:tabs 右对齐页签），否则按正文宽度
+  private tocRightTabPx(pPr: Element | null): number | undefined {
+    const tabs = pPr?.getElementsByTagName('w:tabs')[0]
+    const rightTabs = tabs
+      ? Array.from(tabs.getElementsByTagName('w:tab')).filter(
+          tab => tab.getAttribute('w:val') === 'right'
+        )
+      : []
+    const positions = rightTabs
+      .map(tab => parseDocxNumber(tab.getAttribute('w:pos')))
+      .filter(position => position > 0)
+    if (positions.length) return twipToPx(positions[positions.length - 1])
+    const geometry = this.pageGeometry
+    if (geometry) {
+      const [, right, , left] = geometry.margins
+      return Math.max(geometry.width - right - left, 0)
+    }
+    return undefined
+  }
+
+  // 目录点线引导：按右制表位补足点线让页码靠右；空间不足时退回空格分隔
+  private buildTocLeader(
+    content: IElement[],
+    pageRuns: IElement[],
+    rightTabPx?: number
+  ): IElement | null {
+    if (!rightTabPx || rightTabPx <= 0) return null
+    const runsWidth = (runs: IElement[]): number =>
+      runs.reduce((total, element) => {
+        if (element.type !== ElementType.TEXT || !element.value) return total
+        return (
+          total +
+          measureTextWidth(element.value, element.font, element.size || 12)
+        )
+      }, 0)
+    const anchor =
+      [...content]
+        .reverse()
+        .find(element => element.type === ElementType.TEXT && element.value) ||
+      pageRuns.find(element => element.type === ElementType.TEXT)
+    const font = anchor?.font
+    const size = anchor?.size || 12
+    const available = rightTabPx - runsWidth(content) - runsWidth(pageRuns) - 6
+    const dotWidth = measureTextWidth('.', font, size)
+    if (dotWidth <= 0 || available < dotWidth * 4) return null
+    return {
+      value: '.'.repeat(Math.floor(available / dotWidth)),
+      type: ElementType.TEXT,
+      ...(font ? { font } : {}),
+      size
+    }
   }
 
   // 段落底边框（w:pBdr > w:bottom）的空段落 -> 分隔线

@@ -260,6 +260,53 @@ describe('createDocxImporter', () => {
     expect(collectText((link?.valueList as unknown[]) || [])).toContain('链接');
   });
 
+  it('目录条目：展平 HYPERLINK 域、统一字号并保留右对齐页码', async () => {
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="${W}">
+  <w:style w:type="paragraph" w:styleId="45"><w:name w:val="toc 1"/><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9638"/></w:tabs></w:pPr><w:rPr><w:sz w:val="18"/></w:rPr></w:style>
+  <w:style w:type="paragraph" w:styleId="46"><w:name w:val="toc 2"/><w:basedOn w:val="45"/></w:style>
+</w:styles>`;
+    const tocEntry = (styleId: string, runs: string) =>
+      `<w:p><w:pPr><w:pStyle w:val="${styleId}"/><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9638"/></w:tabs></w:pPr>` +
+      `<w:r><w:fldChar w:fldCharType="begin"/></w:r>` +
+      `<w:r><w:instrText> HYPERLINK \\l _Toc1 </w:instrText></w:r>` +
+      `<w:r><w:fldChar w:fldCharType="separate"/></w:r>` +
+      runs +
+      `<w:r><w:tab/></w:r>` +
+      `<w:r><w:fldChar w:fldCharType="begin"/></w:r>` +
+      `<w:r><w:instrText> PAGEREF _Toc1 </w:instrText></w:r>` +
+      `<w:r><w:fldChar w:fldCharType="separate"/></w:r>` +
+      `<w:r><w:t>12</w:t></w:r>` +
+      `<w:r><w:fldChar w:fldCharType="end"/></w:r>` +
+      `<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`;
+    const body =
+      // 中文 Word 的目录数字 run 常只写 szCs=144（72pt），不能当正文字号
+      tocEntry(
+        '45',
+        `<w:r><w:rPr><w:szCs w:val="144"/></w:rPr><w:t xml:space="preserve">1 </w:t></w:r><w:r><w:t>功能简介</w:t></w:r>`,
+      ) +
+      tocEntry(
+        '46',
+        `<w:r><w:t xml:space="preserve">2.1 </w:t></w:r><w:r><w:t>设置配置</w:t></w:r>`,
+      );
+    const buffer = await buildDocxPackage({
+      body,
+      wordFiles: { 'styles.xml': styles },
+    });
+    await createDocxImporter(command as unknown as Editor['command'])({
+      arrayBuffer: buffer,
+    });
+
+    const data = importedData();
+    // 目录条目不应再包成超链接（HYPERLINK \l 是书签锚点，编辑器不支持）
+    expect(data.main.some((el) => el.type === 'hyperlink')).toBe(false);
+    const text = mainText(data);
+    expect(text).toMatch(/1 功能简介\.{3,}12\n/);
+    expect(text).toMatch(/\u3000\u30002\.1 设置配置\.{3,}12\n/);
+    // 统一使用 toc 样式字号（18 半磅 -> 12px），不保留 szCs 的 96px
+    expect(JSON.stringify(data.main)).not.toContain('"size":96');
+  });
+
   it('表格边框：统一边框与混合边框', async () => {
     const allBorders =
       `<w:tblPr><w:tblBorders><w:top w:val="single"/><w:left w:val="single"/><w:bottom w:val="single"/><w:right w:val="single"/><w:insideH w:val="single"/><w:insideV w:val="single"/></w:tblBorders></w:tblPr>`;
