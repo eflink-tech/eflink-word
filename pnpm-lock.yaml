@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@hufe921/canvas-editor@1.0.2':
-    hash: 04ff880f14db34824be80d4f53728bcbed2dde541ad8811bc7e6d76ccee8f2da
+    hash: 310d7502916d50bf8a424a10488054e47740fcff10225c4ae7ad142084ff9456
     path: patches/@hufe921__canvas-editor@1.0.2.patch
 
 importers:
@@ -86,7 +86,7 @@ importers:
         version: link:../office-kit
       '@hufe921/canvas-editor':
         specifier: 1.0.2
-        version: 1.0.2(patch_hash=04ff880f14db34824be80d4f53728bcbed2dde541ad8811bc7e6d76ccee8f2da)
+        version: 1.0.2(patch_hash=310d7502916d50bf8a424a10488054e47740fcff10225c4ae7ad142084ff9456)
       color:
         specifier: ^5.0.3
         version: 5.0.3
@@ -2041,7 +2041,7 @@ snapshots:
 
   '@exodus/bytes@1.15.1': {}
 
-  '@hufe921/canvas-editor@1.0.2(patch_hash=04ff880f14db34824be80d4f53728bcbed2dde541ad8811bc7e6d76ccee8f2da)': {}
+  '@hufe921/canvas-editor@1.0.2(patch_hash=310d7502916d50bf8a424a10488054e47740fcff10225c4ae7ad142084ff9456)': {}
 
   '@inquirer/external-editor@1.0.3(@types/node@25.9.7)':
     dependencies:

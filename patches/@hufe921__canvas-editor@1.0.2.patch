@@ -1,8 +1,30 @@
 diff --git a/dist/canvas-editor.js b/dist/canvas-editor.js
-index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00401446e5 100644
+index cb52eef6147a01c75146b94cacf54d14cd5c1af6..2dcf7b46d05b5f7908ee6258416c79cf181210c8 100644
 --- a/dist/canvas-editor.js
 +++ b/dist/canvas-editor.js
-@@ -4497,7 +4497,10 @@ function vn(e) {
+@@ -211,6 +211,21 @@
+ 	}
+ 	return t;
+ }
++// 中西文自动间距（Word autoSpaceDE/DN）：汉字与拉丁字母/数字之间加 1/4 字宽
++function __efAutoCJK(e) {
++	return /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/.test(e);
++}
++function __efAutoLatin(e) {
++	return /[A-Za-z0-9]/.test(e);
++}
++function __efAutoSpaced(e) {
++	return e !== void 0 && e !== "" && __efAutoCJK(e) !== __efAutoLatin(e) && (__efAutoCJK(e) || __efAutoLatin(e));
++}
++function __efAutoSpaceWidth(e, t) {
++	let n = Array.from(e), r = 0;
++	for (let i = 1; i < n.length; i++) __efAutoSpaced(n[i - 1]) && __efAutoSpaced(n[i]) && __efAutoCJK(n[i - 1]) !== __efAutoCJK(n[i]) && r++;
++	return r * t * .25;
++}
+ function ee(e, t) {
+ 	let n = document.createElement("a");
+ 	n.href = e, n.download = t, n.click();
+@@ -4497,7 +4512,10 @@
  }
  function yn(e, t) {
  	let { isHandleFirstElement: n = !0, isForceCompensation: r = !1, editorOptions: i } = t, a = e[0];
@@ -14,7 +36,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  	let o = 0;
  	for (; o < e.length;) {
  		let n = e[o];
-@@ -4512,7 +4515,7 @@ function yn(e, t) {
+@@ -4512,7 +4530,7 @@
  				let t = n.titleId || M(), a = i.title;
  				for (let i = 0; i < r.length; i++) {
  					let s = r[i];
@@ -23,7 +45,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  				}
  			}
  			o--;
-@@ -4563,7 +4566,7 @@ function yn(e, t) {
+@@ -4563,7 +4581,7 @@
  			}
  			o--;
  		} else if (n.type === H.TABLE) {
@@ -32,7 +54,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  			if (n.id = e, n.trList) {
  				let { table: { defaultTrMinHeight: r, defaultColMinWidth: a }, margins: o } = i;
  				if (!n.colgroup?.length && n.trList.length) {
-@@ -4579,7 +4582,8 @@ function yn(e, t) {
+@@ -4579,7 +4597,8 @@
  						r.id = i, yn(r.value, {
  							...t,
  							isHandleFirstElement: !0,
@@ -42,7 +64,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  						}), !r.value[0].size && r.value[1]?.size && Tn(r.value[1]) && (r.value[0].size = r.value[1].size);
  						for (let t = 0; t < r.value.length; t++) {
  							let n = r.value[t];
-@@ -7639,6 +7643,7 @@ var Jr = { dragover: qr }, Yr = class {
+@@ -7639,6 +7658,7 @@
  							pageNo: i
  						};
  					}
@@ -50,7 +72,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  					this.floatPositionList.push({
  						pageNo: i,
  						element: a,
-@@ -8088,9 +8093,9 @@ var Jr = { dragover: qr }, Yr = class {
+@@ -8088,9 +8108,9 @@
  	}
  	setSurroundPosition(e) {
  		let { scale: t } = this.options, { pageNo: n, row: r, rowElement: i, rowElementRect: a, surroundElementList: o, availableWidth: s } = e, c = a.x, l = 0;
@@ -62,7 +84,20 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  			let f = {
  				...d,
  				x: d.x * t,
-@@ -9580,6 +9585,7 @@ var ui = class extends ni {
+@@ -9114,7 +9134,11 @@
+ 		}
+ 		let n = `${t.value}${e.font}`, r = this.cacheMeasureText.get(n);
+ 		if (r) return r;
+-		let i = e.measureText(t.value);
++		let i = e.measureText(t.value), a = __efAutoSpaceWidth(t.value, this.draw.getElementSize(t));
++		a && (i = {
++			...i,
++			width: i.width + a
++		});
+ 		return this.cacheMeasureText.set(n, i), i;
+ 	}
+ 	getBasisWordBoundingBoxAscent(e, t) {
+@@ -9580,6 +9604,7 @@
  				for (let n of C) n.rowIndex < e && n.rowIndex + n.rowspan > e && t.push(n);
  				return t;
  			}, { table: { tdPadding: E }, defaultSize: D } = this.options, O = E[0] + E[2] + D, k = (e, n, r) => {
@@ -70,7 +105,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  				let i = S[e], a = 0, o = !1, s = 0;
  				for (let c of T(e)) {
  					let e = Math.min(c.height, i + n - c.y), l = Math.max(0, r - c.y);
-@@ -15187,10 +15193,10 @@ var Aa = class {
+@@ -15187,10 +15212,10 @@
  					ht.CIRCLE,
  					ht.SQUARE
  				], r = n[e % n.length];
@@ -83,7 +118,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  		}
  	}
  }, Wa = class e {
-@@ -15964,7 +15970,12 @@ var Qa = class {
+@@ -15964,7 +15989,12 @@
  		this.range.setRange(n, n), this.draw.render({ isCompute: !1 });
  	}
  	_measureTdContentWidth(e) {
@@ -97,7 +132,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  		for (let a = 0; a < e.value.length; a++) {
  			let o = e.value[a];
  			if (o.value === "​") {
-@@ -17191,7 +17202,12 @@ var to = class {
+@@ -17191,7 +17221,12 @@
  		return a < 12 ? o = a / 12 : a > 30 && (o = 1 + (a - 30) / 30), n * o * (e.rowMargin ?? r) * i;
  	}
  	computeRowList(e) {
@@ -111,16 +146,72 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  		if (this.controlMinWidthPlaceholderElementListSet.has(n)) {
  			for (let e = n.length - 1; e >= 0; e--) n[e].isControlMinWidthPlaceholder && n.splice(e, 1);
  			this.controlMinWidthPlaceholderElementListSet.delete(n);
-@@ -17368,7 +17384,7 @@ var to = class {
+@@ -17216,7 +17251,7 @@
+ 				height: 0,
+ 				boundingBoxAscent: 0,
+ 				boundingBoxDescent: 0
+-			}, te = t.offsetX || s.listId && (S.get(s.listId) || 0) + (s.listLevel ? this.listParticle.LIST_INDENT_WIDTH * s.listLevel * p : 0) || 0, L = (T && w ? w.width : j) - te, ne = t.elementList.length === 1;
++			}, te = t.offsetX || s.listId && (S.get(s.listId) || 0) + (s.listLevel ? this.listParticle.LIST_INDENT_WIDTH * s.listLevel * p : 0) || 0, L = (T && w ? w.width : j) - te, ne = t.elementList.length === 1, za = 0;
+ 			if (E += ne ? te : 0, D += ne && t.offsetY || 0, (s.hide || s.control?.hide || s.area?.hide && !this.isAreaHideDisabled() || this.traceParticle.isTraceHidden(s)) && !this.isDesignMode()) {
+ 				let e = t.elementList[t.elementList.length - 1];
+ 				l.height = e?.metrics.height || this.options.defaultSize * p, l.boundingBoxAscent = e?.metrics.boundingBoxAscent || 0, l.boundingBoxDescent = e?.metrics.boundingBoxDescent || 0;
+@@ -17312,8 +17347,15 @@
+ 				let n = this.textParticle.measureText(x, s);
+ 				l.width = (n.width + t[1] + t[3]) * p, l.height = (s.size || e) * p, l.boundingBoxDescent = 0, l.boundingBoxAscent = (t[0] + n.actualBoundingBoxAscent) * p;
+ 			} else {
+-				let e = s.size || f;
+-				(s.type === H.SUPERSCRIPT || s.type === H.SUBSCRIPT) && (s.actualSize = Math.ceil(e * .6)), l.height = (s.actualSize || e) * p, x.font = this.getElementFont(s), l.width = this.textParticle.measureText(x, s).width * p, s.letterSpacing && (l.width += s.letterSpacing * p);
++				let __efSize = s.size || f;
++				(s.type === H.SUPERSCRIPT || s.type === H.SUBSCRIPT) && (s.actualSize = Math.ceil(__efSize * .6)), l.height = (s.actualSize || __efSize) * p, x.font = this.getElementFont(s), l.width = this.textParticle.measureText(x, s).width * p, s.letterSpacing && (l.width += s.letterSpacing * p);
++				if (e > 0) {
++					let zp = n[e - 1];
++					if (zp && (!zp.type || zp.type === H.TEXT) && (!s.type || s.type === H.TEXT) && !zp.hide && !s.hide) {
++						let zl = (zp.value || "").slice(-1), zf = (s.value || "")[0];
++						zl && zf && __efAutoSpaced(zl) && __efAutoSpaced(zf) && __efAutoCJK(zl) !== __efAutoCJK(zf) && (za = __efSize * .25 * p);
++					}
++				}
+ 				let t = this.textParticle.measureBasisWord(x, s.font);
+ 				l.boundingBoxAscent = t.actualBoundingBoxAscent * p, l.boundingBoxDescent = t.actualBoundingBoxDescent * p, s.type === H.SUPERSCRIPT ? l.boundingBoxAscent += l.height / 2 : s.type === H.SUBSCRIPT && (l.boundingBoxDescent += l.height / 2);
+ 			}
+@@ -17343,7 +17385,7 @@
+ 				}
+ 				o.length && (n.splice(e + 1, 0, ...o), this.controlMinWidthPlaceholderElementListSet.add(n)), F = 0;
+ 			}
+-			let B = n[e - 1], ie = n[e + 1], V = t.width + l.width;
++			let B = n[e - 1], ie = n[e + 1], V = t.width + l.width + za;
+ 			if (this.options.wordBreak === _.BREAK_WORD && (!B?.type || B?.type === H.TEXT) && (!s.type || s.type === H.TEXT)) {
+ 				let t = `${B?.value || ""}${s.value}`;
+ 				if (this.WORD_LIKE_REG.test(t)) {
+@@ -17367,8 +17409,8 @@
+ 				availableWidth: L,
  				surroundElementList: d
  			});
- 			E = ae.x, V += ae.rowIncreaseWidth, E += l.width;
+-			E = ae.x, V += ae.rowIncreaseWidth, E += l.width;
 -			let oe = s.type === H.SEPARATOR || s.type === H.TABLE || B?.type === H.TABLE || B?.type === H.BLOCK || s.type === H.BLOCK || B?.type === H.PAGE_BREAK || B?.imgDisplay === r.INLINE || s.imgDisplay === r.INLINE || B?.listId !== s.listId || B?.areaId !== s.areaId && !(s.area?.hide && !this.isAreaHideDisabled()) || s.control?.flexDirection === a.COLUMN && (s.controlComponent === K.CHECKBOX || s.controlComponent === K.RADIO) && B?.controlComponent === K.VALUE || e !== 0 && s.value === "​" && !(s.area?.hide && !this.isAreaHideDisabled()), se = V > L, ce = oe || se;
++			E = ae.x, V += ae.rowIncreaseWidth, E += l.width + za;
 +			let oe = s.type === H.PAGE_BREAK || s.type === H.SEPARATOR || s.type === H.TABLE || B?.type === H.TABLE || B?.type === H.BLOCK || s.type === H.BLOCK || B?.type === H.PAGE_BREAK || B?.imgDisplay === r.INLINE || s.imgDisplay === r.INLINE || s.imgDisplay === r.SURROUND || B?.listId !== s.listId || B?.areaId !== s.areaId && !(s.area?.hide && !this.isAreaHideDisabled()) || s.control?.flexDirection === a.COLUMN && (s.controlComponent === K.CHECKBOX || s.controlComponent === K.RADIO) && B?.controlComponent === K.VALUE || e !== 0 && s.value === "​" && !(s.area?.hide && !this.isAreaHideDisabled()), se = V > L, ce = oe || se;
  			if (ce) {
  				let r = {
  					width: l.width,
-@@ -17416,6 +17432,22 @@ var to = class {
+@@ -17392,7 +17434,7 @@
+ 					}
+ 				}
+ 				s.listId && (r.isList = !0, r.offsetX = (S.get(s.listId) || 0) + (s.listLevel ? this.listParticle.LIST_INDENT_WIDTH * s.listLevel * p : 0), r.listIndex = P.get(s.listId) ?? 0), r.offsetY = !o && s.area?.top && s.areaId !== n[e - 1]?.areaId ? s.area.top * p : 0, C.push(r);
+-			} else t.width += l.width, e === 0 && (Rn(n[1]) || n[1]?.areaId) ? (t.height = b, t.ascent = b) : t.height < R && (t.height = R, t.ascent = re), t.elementList.push(z);
++			} else za && e > 0 && (n[e - 1].metrics.width += za), t.width += l.width + za, e === 0 && (Rn(n[1]) || n[1]?.areaId) ? (t.height = b, t.ascent = b) : t.height < R && (t.height = R, t.ascent = re), t.elementList.push(z);
+ 			if (ce || e === n.length - 1) {
+ 				if (!this.isDesignMode() && t.height > 0) {
+ 					let e = t.elementList.filter((e) => e.value !== "​");
+@@ -17400,7 +17442,7 @@
+ 				}
+ 				if (t.isWidthNotEnough = se && !oe, !t.isSurround && (B?.rowFlex === u.JUSTIFY || B?.rowFlex === u.ALIGNMENT && t.isWidthNotEnough)) {
+ 					let e = t.elementList[0]?.value === "​" ? t.elementList.slice(1) : t.elementList, n = (L - t.width) / (e.length - 1);
+-					for (let t = 0; t < e.length - 1; t++) {
++										for (let t = 0; t < e.length - 1; t++) {
+ 						let r = e[t];
+ 						r.metrics.width += n;
+ 					}
+@@ -17416,6 +17458,22 @@
  					(D - ee + n + R > N || e) && (!e && T && w && I < w.count - 1 ? (I += 1, D = ee, E = M + (w.offsets[I] || 0)) : (Vn(d, O), O += 1, I = 0, ee = A[0] + this.getHeader().getExtraHeight(O), D = ee, E = M + (w && w.offsets[0] || 0)));
  				}
  				let n = C[C.length - 1];
@@ -143,7 +234,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  				n && T && n.columnIndex !== void 0 && (n.columnIndex = I), z.left = 0, E = this.position.setSurroundPosition({
  					pageNo: O,
  					rowElement: z,
-@@ -17451,7 +17483,10 @@ var to = class {
+@@ -17451,7 +17509,10 @@
  			for (let c = 0; c < this.rowList.length; c++) {
  				let l = this.rowList[c], u = l.offsetY || 0;
  				if (s !== void 0 && l.columnIndex !== void 0 && l.columnIndex > 0 && l.columnIndex !== s) o = this.getMainOuterHeight(i, r) + l.height + u, e[i].push(l);
@@ -155,7 +246,7 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00
  					if (Number.isInteger(n) && i >= n) {
  						let e = l.tableFragment, t = this.elementList[l.startIndex];
  						this.elementList = e && t?.type === H.TABLE && this.tablePaging.truncateTableByFragment(t, e, this.elementList) ? this.elementList.slice(0, l.startIndex + 1) : this.elementList.slice(0, l.startIndex);
-@@ -20813,7 +20848,7 @@ var Js = class {
+@@ -20813,7 +20874,7 @@
  			footer: s,
  			graffiti: c
  		}, this.listener, this.eventBus, this.override);
