@@ -194,7 +194,18 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
     flushSync(() => setDocxImporting(true));
     try {
       const { importDocx } = await import('../../core/docx');
-      await importDocx(editor, file);
+      const zone = await importDocx(editor, file);
+      // 页眉/页脚/页码跟随导入的文档：编辑器选项在 contentChange 后会被应用
+      // 配置重放（Editor.tsx refreshPageNumber），须同步进 uiStore 才能稳定生效；
+      // content 置空 = 显示文档自带的页眉/页脚，而非设置面板里的自定义文本
+      const { setHeaderConfig, setFooterConfig, setPageNumberConfig } = useUIStore.getState();
+      setHeaderConfig({ enabled: !!zone?.hasHeader, content: '' });
+      setFooterConfig({ enabled: !!zone?.hasFooter, content: '' });
+      setPageNumberConfig(
+        zone?.pageNumber
+          ? { enabled: true, ...zone.pageNumber }
+          : { enabled: false },
+      );
     } catch (err) {
       setErrorMessage(resolveErrorMessage(err, t, 'word.error.importDocx'));
     } finally {

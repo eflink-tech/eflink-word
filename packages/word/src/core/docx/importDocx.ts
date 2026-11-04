@@ -647,11 +647,28 @@ function appendLineBreak(elements: IElement[], style: RunStyle) {
 const PAGE_NO_TOKEN = '\u0001pageNo\u0001'
 const PAGE_COUNT_TOKEN = '\u0001pageCount\u0001'
 
+// 页脚页码域换算出的编辑器 pageNumber 配置（子集）
+export interface IDocxImportPageNumber {
+  format?: string
+  rowFlex?: RowFlex
+  size?: number
+  font?: string
+  color?: string
+}
+
+// 导入产生的页眉/页脚状态：调用方（应用层）据此同步自身的
+// 页眉/页脚/页码显示配置——编辑器选项会在 contentChange 后被应用配置重放
+export interface IDocxImportZoneInfo {
+  hasHeader: boolean
+  hasFooter: boolean
+  pageNumber?: IDocxImportPageNumber
+}
+
 // 从页脚元素中提取页码域：占位符替换为 {pageNo}/{pageCount} 模板，
 // 独占一行的页码域整行移除（由编辑器页码渲染），混合行仅去除占位符
 function extractPageNumber(elements: IElement[]): {
   elements: IElement[]
-  pageNumber?: Record<string, unknown>
+  pageNumber?: IDocxImportPageNumber
 } {
   const containsToken = (element: IElement) =>
     typeof element.value === 'string' &&
@@ -670,7 +687,15 @@ function extractPageNumber(elements: IElement[]): {
     }
   }
   if (current.length) groups.push(current)
-  let pageNumber: Record<string, unknown> | undefined
+  let pageNumber:
+    | {
+        format?: string
+        rowFlex?: RowFlex
+        size?: number
+        font?: string
+        color?: string
+      }
+    | undefined
   const output: IElement[] = []
   groups.forEach((group, index) => {
     const tokenElements = group.filter(containsToken)
@@ -923,6 +948,8 @@ interface FieldFrame {
   result: IElement[]
   kind: 'hyperlink' | 'page' | 'pageCount' | 'form' | 'other'
   url?: string
+  // 域指令 run 的样式（页码令牌的字号/字体/颜色来源）
+  style?: RunStyle
 }
 
 function createFieldFrame(): FieldFrame {
@@ -1040,7 +1067,7 @@ class DocxParser {
     IEditorData & {
       watermark?: object
       pageSetup?: object
-      pageNumber?: object
+      pageNumber?: IDocxImportPageNumber
       zoneOffsets?: { headerTop?: number; footerBottom?: number }
       disabledPages?: { header?: number[]; footer?: number[] }
     }
@@ -1117,7 +1144,8 @@ class DocxParser {
     }
   }
 
-  // 页眉/页脚距边距离（twip -> px）
+  // 页眉/页脚距边距离（twip -> px）：OOXML 中是 sectPr > w:pgMar 的
+  // w:header / w:footer 属性（不存在 w:header/w:footer 子元素）
   private parseZoneOffsets(
     body: Element | null
   ): { headerTop?: number; footerBottom?: number } | undefined {
@@ -1125,10 +1153,9 @@ class DocxParser {
     const sectPr = sectPrs?.[sectPrs.length - 1]
     if (!sectPr) return undefined
     const offsets: { headerTop?: number; footerBottom?: number } = {}
-    const header = sectPr.getElementsByTagName('w:header')[0]
-    const footer = sectPr.getElementsByTagName('w:footer')[0]
-    const top = parseDocxNumber(header?.getAttribute('w:top'))
-    const bottom = parseDocxNumber(footer?.getAttribute('w:bottom'))
+    const pgMar = sectPr.getElementsByTagName('w:pgMar')[0]
+    const top = parseDocxNumber(pgMar?.getAttribute('w:header'))
+    const bottom = parseDocxNumber(pgMar?.getAttribute('w:footer'))
     if (top) offsets.headerTop = twipToPx(top)
     if (bottom) offsets.footerBottom = twipToPx(bottom)
     return Object.keys(offsets).length ? offsets : undefined
@@ -1549,7 +1576,11 @@ class DocxParser {
     zone: 'header' | 'footer',
     body: Element,
     maxWatermarkPx: { width: number; height: number }
-  ): Promise<{ elements: IElement[]; watermark?: object; pageNumber?: object }> {
+  ): Promise<{
+    elements: IElement[]
+    watermark?: object
+    pageNumber?: IDocxImportPageNumber
+  }> {
     const resolved = await this.resolveZone(zone, body, 'last')
     if (!resolved) return { elements: [] }
     const { root, rels } = resolved
@@ -2514,6 +2545,9 @@ class DocxParser {
     const finishField = () => {
       const frame = fields.pop()
       if (!frame) return
+      // 无 separate 的域（Word 允许 begin/instrText/end 直接收尾，页脚 PAGE 域
+      // 常无缓存结果）：指令即定义，结束时按指令解析类型
+      if (frame.phase === 'instruction') resolveField(frame)
       if (frame.kind === 'hyperlink' && frame.url && frame.result.length) {
         emit([
           {
@@ -2529,11 +2563,13 @@ class DocxParser {
         (frame.kind === 'page' || frame.kind === 'pageCount') &&
         ctx.zone === 'footer'
       ) {
-        // 页脚页码域：交给编辑器 pageNumber 渲染
+        // 页脚页码域：交给编辑器 pageNumber 渲染（携带域 run 样式，
+        // extractPageNumber 以令牌元素为锚点取字号/字体/颜色）
         emit([
           {
             value: frame.kind === 'page' ? PAGE_NO_TOKEN : PAGE_COUNT_TOKEN,
-            type: ElementType.TEXT
+            type: ElementType.TEXT,
+            ...toElementStyle(frame.style || {})
           }
         ])
         return
@@ -2583,6 +2619,7 @@ class DocxParser {
           const top = fields[fields.length - 1]
           if (top && top.phase === 'instruction') {
             top.instruction += instrText.textContent || ''
+            if (!top.style) top.style = this.runStyleOf(child, pStyleId)
           }
           continue
         }
@@ -2624,10 +2661,18 @@ class DocxParser {
           (frame.kind === 'page' || frame.kind === 'pageCount') &&
           ctx.zone === 'footer'
         ) {
+          const anchor = frame.result.find(el => el.value)
           emit([
             {
               value: frame.kind === 'page' ? PAGE_NO_TOKEN : PAGE_COUNT_TOKEN,
-              type: ElementType.TEXT
+              type: ElementType.TEXT,
+              ...(anchor
+                ? {
+                    font: anchor.font,
+                    ...(anchor.size ? { size: anchor.size } : {}),
+                    ...(anchor.color ? { color: anchor.color } : {})
+                  }
+                : {})
             }
           ])
         } else {
@@ -2661,23 +2706,27 @@ class DocxParser {
     return elements
   }
 
-  private parseRun(
-    run: Element,
-    ctx: ZoneContext,
-    pStyleId?: string
-  ): IElement[] {
+  // run 样式链：docDefaults -> Normal 默认段落样式 -> 段落样式 -> 字符样式 -> 显式 rPr
+  private runStyleOf(run: Element, pStyleId?: string): RunStyle {
     const explicitRPr = run.getElementsByTagName('w:rPr')[0] || null
     const rStyleId = explicitRPr
       ?.getElementsByTagName('w:rStyle')[0]
       ?.getAttribute('w:val')
-    // 样式优先级：docDefaults -> Normal 默认段落样式 -> 段落样式 -> 字符样式 -> 显式 rPr
-    const style = mergeStyle(
+    return mergeStyle(
       this.defaultRunStyle,
       this.defaultParagraphStyle || {},
       pStyleId ? this.styleRPrById.get(pStyleId) || {} : {},
       rStyleId ? this.styleRPrById.get(rStyleId) || {} : {},
       parseRPr(explicitRPr, this.theme)
     )
+  }
+
+  private parseRun(
+    run: Element,
+    ctx: ZoneContext,
+    pStyleId?: string
+  ): IElement[] {
+    const style = this.runStyleOf(run, pStyleId)
     // 隐藏文字（w:vanish）按 Word 视图语义不导入
     if (style.hidden) return []
     const elementStyle = toElementStyle(style)
@@ -3478,7 +3527,7 @@ class DocxParser {
 // =====================================================================
 
 export function createDocxImporter(command: Command) {
-  return async function (options: IImportDocxOption) {
+  return async function (options: IImportDocxOption): Promise<IDocxImportZoneInfo | undefined> {
     const { arrayBuffer, isAppend } = options
     const zip = await JSZip.loadAsync(arrayBuffer)
     const parser = new DocxParser(zip)
@@ -3499,7 +3548,7 @@ export function createDocxImporter(command: Command) {
         executeInsertElementList?: (payload: IElement[]) => void
       }
       commandAny.executeInsertElementList?.(data.main || [])
-      return
+      return undefined
     }
     // 纸张/边距/方向/默认字体/水印 -> 编辑器配置
     // 注意：updateOptions 会将未传字段重置为默认值，需带上当前配置
@@ -3558,5 +3607,10 @@ export function createDocxImporter(command: Command) {
       }
     }
     command.executeSetValue(data)
+    return {
+      hasHeader: (data.header || []).length > 0,
+      hasFooter: (data.footer || []).length > 0,
+      ...(pageNumber ? { pageNumber } : {})
+    }
   }
 }

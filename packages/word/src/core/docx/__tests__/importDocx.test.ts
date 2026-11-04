@@ -228,6 +228,50 @@ describe('createDocxImporter', () => {
     expect(options.pageNumber?.disabled).toBe(false);
   });
 
+  it('页脚 PAGE 域无 separate/缓存结果也能换算 pageNumber（真实语料：Gemini/WPS 导出）', async () => {
+    const footer = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:ftr xmlns:w="${W}"><w:p><w:pPr><w:jc w:val="center"/></w:pPr>` +
+      `<w:r><w:rPr><w:color w:val="5F6B73"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve">内部参考 | 第 </w:t></w:r>` +
+      `<w:r><w:rPr><w:color w:val="5F6B73"/><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r>` +
+      `<w:r><w:rPr><w:color w:val="5F6B73"/><w:sz w:val="16"/></w:rPr><w:instrText>PAGE</w:instrText></w:r>` +
+      `<w:r><w:rPr><w:color w:val="5F6B73"/><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r>` +
+      `<w:r><w:rPr><w:color w:val="5F6B73"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> 页</w:t></w:r></w:p></w:ftr>`;
+    const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
+</Relationships>`;
+    const body =
+      paragraphXml('正文') +
+      `<w:sectPr><w:footerReference w:type="default" r:id="rId6"/><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="965" w:right="1037" w:bottom="893" w:left="1037" w:header="432" w:footer="432"/></w:sectPr>`;
+    const buffer = await buildDocxPackage({
+      body,
+      wordFiles: { 'footer1.xml': footer },
+      documentRels: rels,
+    });
+    const zone = await createDocxImporter(command as unknown as Editor['command'])({
+      arrayBuffer: buffer,
+    });
+
+    // 页码行整行转为 pageNumber 模板，页脚文本不再重复输出
+    const data = importedData();
+    expect(collectText(data.footer).trim()).toBe('');
+    const options = command.executeUpdateOptions.mock.calls[0][0] as {
+      pageNumber?: { format?: string; size?: number; color?: string; disabled?: boolean };
+      footer?: { bottom?: number };
+    };
+    expect(options.pageNumber?.format).toBe('内部参考 | 第 {pageNo} 页');
+    expect(options.pageNumber?.disabled).toBe(false);
+    // 域 run 样式（8pt 灰字）随令牌带入配置
+    expect(options.pageNumber?.size).toBe(11);
+    expect(options.pageNumber?.color).toBe('#5F6B73');
+    // 页眉/页脚距边距离来自 pgMar 的 w:header/w:footer 属性
+    expect(options.footer?.bottom).toBe(29);
+    // 导入返回 zone 状态：应用层据此同步页眉/页脚/页码显示配置
+    expect(zone?.hasHeader).toBe(false);
+    expect(zone?.hasFooter).toBe(false);
+    expect(zone?.pageNumber?.format).toBe('内部参考 | 第 {pageNo} 页');
+  });
+
   it('文本框：AlternateContent 只取 Choice 一次', async () => {
     const txbx = `<w:txbxContent><w:p><w:r><w:t>框内文字</w:t></w:r></w:p></w:txbxContent>`;
     const body = `<w:p><w:r><mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">` +
