@@ -534,6 +534,47 @@ describe('createDocxImporter', () => {
     expect(lists[3].listId).not.toBe(lists[0].listId);
   });
 
+  it('中文编号：chineseCounting + “%1、” 按字面标记导入', async () => {
+    const numbering = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="${W}">
+  <w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="2"/><w:numFmt w:val="chineseCounting"/><w:suff w:val="nothing"/><w:lvlText w:val="%1、"/></w:lvl></w:abstractNum>
+  <w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num>
+</w:numbering>`;
+    const item = (text: string) =>
+      `<w:p><w:pPr><w:numPr><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>${text}</w:t></w:r></w:p>`;
+    const buffer = await buildDocxPackage({
+      body: item('项目回款情况') + item('科研工作开展情况'),
+      wordFiles: { 'numbering.xml': numbering },
+    });
+    await createDocxImporter(command as unknown as Editor['command'])({
+      arrayBuffer: buffer,
+    });
+
+    const main = importedData().main as Array<Record<string, any>>;
+    expect(main.some((el) => el.type === 'list')).toBe(false);
+    const text = mainText({ main });
+    expect(text).toContain('二、项目回款情况');
+    expect(text).toContain('三、科研工作开展情况');
+  });
+
+  it('高亮 run 前的首行缩进独立成元素，高亮不覆盖缩进', async () => {
+    const buffer = await buildDocx(
+      `<w:p><w:pPr><w:ind w:firstLineChars="200"/></w:pPr>` +
+        `<w:r><w:rPr><w:highlight w:val="lightGray"/></w:rPr><w:t>五</w:t></w:r>` +
+        `<w:r><w:t>、工作开展情况</w:t></w:r></w:p>`,
+    );
+    await createDocxImporter(command as unknown as Editor['command'])({
+      arrayBuffer: buffer,
+    });
+
+    const main = importedData().main as Array<Record<string, any>>;
+    const highlighted = main.find((el) => el.highlight);
+    expect(highlighted?.value).toBe('五');
+    const indent = main.find((el) => el.value === '\u3000\u3000');
+    expect(indent).toBeTruthy();
+    expect(indent?.highlight).toBeUndefined();
+  });
+
   it('段落换行拆为中性元素，下一段首行不继承标题行高', async () => {
     const buffer = await buildDocx(
       `<w:p><w:pPr><w:spacing w:before="480" w:after="480" w:line="288" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:sz w:val="52"/></w:rPr><w:t>大标题</w:t></w:r></w:p>` +

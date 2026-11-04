@@ -987,6 +987,118 @@ interface ListLevelInfo {
   start?: number
   // 标记颜色（numbering.xml 的 lvl/rPr/color）
   color?: string
+  // 原始编号定义：编辑器只支持十进制 “1.”，其它格式（如 “一、”）按字面文本导入
+  numFmt: string
+  lvlText: string
+  suff: string
+}
+
+const CHINESE_DIGITS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+const CHINESE_LEGAL_DIGITS = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖']
+const CHINESE_UNITS = ['', '十', '百', '千']
+const CHINESE_LEGAL_UNITS = ['', '拾', '佰', '仟']
+
+// 中文计数（一、十一、二十一、一百零一），与 Word chineseCounting 一致
+function chineseNumber(num: number, legal = false): string {
+  if (!Number.isFinite(num) || num <= 0 || num >= 10000) return String(num)
+  const digits = legal ? CHINESE_LEGAL_DIGITS : CHINESE_DIGITS
+  const units = legal ? CHINESE_LEGAL_UNITS : CHINESE_UNITS
+  const chars = String(num)
+  let out = ''
+  let pendingZero = false
+  for (let i = 0; i < chars.length; i++) {
+    const digit = Number(chars[i])
+    const unit = units[chars.length - 1 - i]
+    if (digit === 0) {
+      pendingZero = out !== ''
+      continue
+    }
+    if (pendingZero) {
+      out += digits[0]
+      pendingZero = false
+    }
+    out += digits[digit] + unit
+  }
+  return out.startsWith(`一${units[1]}`) ? out.slice(1) : out
+}
+
+function romanNumber(num: number): string {
+  if (!Number.isFinite(num) || num <= 0 || num > 3999) return String(num)
+  const table: [number, string][] = [
+    [1000, 'm'],
+    [900, 'cm'],
+    [500, 'd'],
+    [400, 'cd'],
+    [100, 'c'],
+    [90, 'xc'],
+    [50, 'l'],
+    [40, 'xl'],
+    [10, 'x'],
+    [9, 'ix'],
+    [5, 'v'],
+    [4, 'iv'],
+    [1, 'i']
+  ]
+  let rest = num
+  let out = ''
+  for (const [value, symbol] of table) {
+    while (rest >= value) {
+      out += symbol
+      rest -= value
+    }
+  }
+  return out
+}
+
+function letterNumber(num: number): string {
+  if (!Number.isFinite(num) || num <= 0) return String(num)
+  let rest = num
+  let out = ''
+  while (rest > 0) {
+    rest -= 1
+    out = String.fromCharCode(97 + (rest % 26)) + out
+    rest = Math.floor(rest / 26)
+  }
+  return out
+}
+
+// OOXML numFmt -> 标记文本（编辑器不支持的格式按字面字符导入）
+function formatListNumber(value: number, numFmt: string): string {
+  switch (numFmt) {
+    case 'chineseCounting':
+    case 'chineseCountingThousand':
+    case 'ideographDigital':
+      return chineseNumber(value)
+    case 'chineseLegalSimplified':
+      return chineseNumber(value, true)
+    case 'lowerLetter':
+      return letterNumber(value)
+    case 'upperLetter':
+      return letterNumber(value).toUpperCase()
+    case 'lowerRoman':
+      return romanNumber(value)
+    case 'upperRoman':
+      return romanNumber(value).toUpperCase()
+    case 'decimalZero':
+      return value < 10 ? `0${value}` : String(value)
+    default:
+      return String(value)
+  }
+}
+
+// 编辑器有序列表只能渲染 “1.” 且从 1 开始；其它编号定义退化为字面标记。
+// continuation：Word 用多个 numId + 递增 w:start 续号时，编辑器合并成一条
+// 列表后编号仍然连续，可继续用列表
+function isEditorOrderedLevel(
+  level: ListLevelInfo,
+  continuation: boolean
+): boolean {
+  return (
+    level.numFmt === 'decimal' &&
+    level.lvlText === '%1.' &&
+    ((level.start ?? 1) === 1 || continuation) &&
+    level.suff !== 'nothing'
+  )
 }
 
 // ====================================================================
@@ -1010,6 +1122,8 @@ class DocxParser {
     numId: string
     next: number
   } | null = null
+  // 字面编号计数器：numId -> 各级当前值（中文编号等编辑器不支持的形式）
+  private literalListCounters = new Map<string, number[]>()
   private listIdSeq = 0
   private theme: ThemeContext = EMPTY_THEME
   private defaultRunStyle: RunStyle = {}
@@ -1403,18 +1517,28 @@ class DocxParser {
           lvl.getElementsByTagName('w:start')[0]?.getAttribute('w:val')
         )
         const color = listMarkerColor(lvl)
+        const lvlText =
+          lvl.getElementsByTagName('w:lvlText')[0]?.getAttribute('w:val') || ''
+        const suff =
+          lvl.getElementsByTagName('w:suff')[0]?.getAttribute('w:val') || 'tab'
         if (numFmt === 'bullet') {
           levels.push({
             listType: ListType.UL,
             listStyle: bulletStyleOf(lvl),
-            ...(color ? { color } : {})
+            ...(color ? { color } : {}),
+            numFmt,
+            lvlText,
+            suff
           })
         } else {
           levels.push({
             listType: ListType.OL,
             listStyle: ListStyle.DECIMAL,
             ...(start ? { start } : {}),
-            ...(color ? { color } : {})
+            ...(color ? { color } : {}),
+            numFmt,
+            lvlText,
+            suff
           })
         }
       }
@@ -1886,7 +2010,7 @@ class DocxParser {
       return { elements: [...prefix, separator], trailingBreak: false }
     }
 
-    const inline = this.parseInlineContent(p, ctx, pStyleId)
+    let inline = this.parseInlineContent(p, ctx, pStyleId)
 
     // 行属性（行距换算需要段落字号）
     const paragraphSize =
@@ -1938,9 +2062,19 @@ class DocxParser {
       const ilvl = mergedPpr.ilvl || 0
       const levels = this.listTypeByNumId.get(numId)
       const levelInfo = levels?.[ilvl] ?? levels?.[levels.length - 1] ?? null
-      if (levelInfo) {
+      const start = levelInfo?.start ?? 1
+      // 与 resolveListId 的续号判断一致：start 接上前一段序列的下一号
+      const continuesOrderedList =
+        !!levelInfo &&
+        levelInfo.listType === ListType.OL &&
+        this.orderedListRun?.level === ilvl &&
+        start === this.orderedListRun.next
+      if (
+        levelInfo &&
+        (levelInfo.listType === ListType.UL ||
+          isEditorOrderedLevel(levelInfo, continuesOrderedList))
+      ) {
         const { listType: type, listStyle, color } = levelInfo
-        const start = levelInfo.start ?? 1
         const listId = this.resolveListId(numId, type, ilvl, start)
         const withRowMargin = (element: IElement): IElement =>
           this.applyParagraphStyle(element, undefined, paragraphRowMargin)
@@ -1980,6 +2114,28 @@ class DocxParser {
             }
           ],
           trailingBreak: false
+        }
+      }
+      if (levelInfo) {
+        // 非编辑器可表示的编号（中文数字、非 “1.” 模板、非 1 起始等）：
+        // 直接写成字面标记，保证与 Word 的显示一致
+        const marker = this.nextLiteralListMarker(
+          numId,
+          ilvl,
+          levelInfo,
+          levels || []
+        )
+        if (marker) {
+          inline = [
+            {
+              value: marker,
+              type: ElementType.TEXT,
+              font,
+              size: fontSize,
+              ...(levelInfo.color ? { color: levelInfo.color } : {})
+            },
+            ...inline
+          ]
         }
       }
     }
@@ -2045,14 +2201,27 @@ class DocxParser {
       element =>
         element.type === ElementType.TEXT && (element.value || '').trim() !== ''
     )
+    // 缩进是全角空格近似；带高亮的首个 run 不能把缩进并进去，
+    // 否则高亮会画到缩进区（Word 只高亮正文字符）
+    const firstInline = inline[0]
+    const canMergeIndent =
+      firstInline?.type === ElementType.TEXT && !firstInline.highlight
     const indentedInline =
       indent && hasText
-        ? inline[0].type === ElementType.TEXT
+        ? canMergeIndent
           ? [
-              { ...inline[0], value: `${indent}${inline[0].value || ''}` },
+              { ...firstInline, value: `${indent}${firstInline.value || ''}` },
               ...inline.slice(1)
             ]
-          : [{ value: indent, type: ElementType.TEXT }, ...inline]
+          : [
+              {
+                value: indent,
+                type: ElementType.TEXT,
+                ...(firstInline?.font ? { font: firstInline.font } : {}),
+                ...(firstInline?.size ? { size: firstInline.size } : {})
+              },
+              ...inline
+            ]
         : inline
 
     // 普通段落：行属性写入行内元素，行尾补 \n
@@ -2446,6 +2615,32 @@ class DocxParser {
     const listId = `ol-${++this.listIdSeq}`
     this.orderedListRun = { listId, level, numId, next: start + 1 }
     return listId
+  }
+
+  // 字面编号标记：按 numFmt/lvlText/suff 生成 “二、” 之类的文本
+  private nextLiteralListMarker(
+    numId: string,
+    ilvl: number,
+    level: ListLevelInfo,
+    levels: (ListLevelInfo | null)[]
+  ): string {
+    if (!level.lvlText) return ''
+    const counters = this.literalListCounters.get(numId) || []
+    for (let i = 0; i <= ilvl; i++) {
+      if (counters[i] === undefined) counters[i] = (levels[i]?.start ?? 1) - 1
+    }
+    counters[ilvl] = (counters[ilvl] ?? 0) + 1
+    for (let i = ilvl + 1; i < counters.length; i++) {
+      counters[i] = (levels[i]?.start ?? 1) - 1
+    }
+    this.literalListCounters.set(numId, counters)
+    const marker = level.lvlText.replace(/%(\d)/g, (_, index: string) => {
+      const counterLevel = Number(index) - 1
+      const counterFormat = levels[counterLevel]?.numFmt || level.numFmt
+      return formatListNumber(counters[counterLevel] ?? 0, counterFormat)
+    })
+    // tab/space 后缀：编辑器里用空格近似；nothing 表示编号与正文紧贴
+    return level.suff === 'nothing' ? marker : `${marker} `
   }
 
   // 段落可用行宽（px）：单元格内为内容宽，正文按纸张版心扣除左缩进

@@ -45,6 +45,8 @@ export function createEditor(opts: CreateEditorOptions): Editor {
     defaultFont: opts.defaultFont,
     defaultSize: opts.defaultSize,
     placeholder: { data: opts.placeholder ?? '请输入正文' },
+    // Word 的高亮是不透明色块；编辑器默认 0.6 透明会把 lightGray 冲淡
+    highlightAlpha: 1,
     // 导入 docx 的表格行高往往未显式声明，canvas-editor 默认 42px 行高地板
     // 会显著拉高页面；降到 24px（paging 布局会按内容撑高，不会截断）
     table: { defaultTrMinHeight: DEFAULT_TABLE_ROW_MIN_HEIGHT },

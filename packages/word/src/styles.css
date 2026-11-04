@@ -2,6 +2,49 @@
    页面级全局样式（html/body 字体、高度等）不属于组件库，由宿主自行提供。 */
 @import 'tailwindcss';
 
+/* docx 常见中文字体的等价回退：本机没装原字体时，按 Word 的替换习惯
+   落到同风格字体（仿宋->FangSong、黑体->Heiti、宋体->Songti 等），
+   避免 canvas 直接退回系统无衬线字体导致导入前后字形差异。
+   有原字体时 local() 优先命中，不影响已安装环境。 */
+@font-face {
+  font-family: '仿宋_GB2312';
+  src: local('仿宋_GB2312'), local('FangSong_GB2312'), local('FZFSK--GBK1-0'),
+    local('FangSong'), local('STFangsong'), local('华文仿宋');
+}
+@font-face {
+  font-family: '仿宋';
+  src: local('仿宋'), local('FangSong'), local('STFangsong'), local('华文仿宋');
+}
+@font-face {
+  font-family: '黑体';
+  src: local('黑体'), local('SimHei'), local('STHeiti'), local('Heiti SC'),
+    local('Heiti TC');
+}
+@font-face {
+  font-family: '微软雅黑';
+  src: local('微软雅黑'), local('Microsoft YaHei'), local('PingFang SC'),
+    local('Heiti SC');
+}
+@font-face {
+  font-family: '宋体';
+  src: local('宋体'), local('SimSun'), local('STSong'), local('Songti SC');
+}
+@font-face {
+  font-family: '楷体';
+  src: local('楷体'), local('KaiTi'), local('STKaiti'), local('Kaiti SC');
+}
+@font-face {
+  font-family: '楷体_GB2312';
+  src: local('楷体_GB2312'), local('KaiTi_GB2312'), local('KaiTi'),
+    local('STKaiti'), local('Kaiti SC');
+}
+@font-face {
+  font-family: '方正公文小标宋';
+  src: local('方正公文小标宋'), local('FZXiaoBiaoSong-B05S'),
+    local('方正小标宋简体'), local('FZXiaoBiaoSong-B05'), local('STZhongsong'),
+    local('Songti SC'), local('SimSun');
+}
+
 /* 打印时隐藏编辑器界面元素，只保留文档画布 */
 @media print {
   .no-print,
