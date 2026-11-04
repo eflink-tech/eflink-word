@@ -2270,7 +2270,11 @@ class DocxParser {
       this.defaultParagraphPpr || undefined
     )
     const line = defaults?.line ?? 0
-    if (!line || line <= 0) return undefined
+    if (!line || line <= 0) {
+      // 文档未声明默认行距时 Word 按单倍行距（≈1.22em）排版；编辑器默认
+      // rowMargin=1 行高约 2em，会把无行距段落撑高导致分页与 Word 不一致
+      return this.spacingRowMargin(240, 'auto', fontSize)
+    }
     return this.spacingRowMargin(line, defaults?.lineRule ?? 'auto', fontSize)
   }
 
@@ -3042,12 +3046,22 @@ class DocxParser {
     }
     const trList: IElement['trList'] = []
     for (let r = 0; r < logicalRows.length; r++) {
+      const trPr = elementChildren(rows[r]).find(el => el.tagName === 'w:trPr')
+      const trHeightElement = trPr?.getElementsByTagName('w:trHeight')[0]
+      const trHeight = parseDocxNumber(trHeightElement?.getAttribute('w:val'))
+      // 固定行高：Word 会把超出行高的单元格内容裁掉，编辑器不支持裁剪，
+      // 只能在导入时按行截断，否则行被内容撑高会拆到下一页
+      const exactHeightPx =
+        trHeight && trHeightElement?.getAttribute('w:hRule') === 'exact'
+          ? twipToPx(trHeight)
+          : undefined
       const tdList: NonNullable<IElement['trList']>[number]['tdList'] = []
       for (let c = 0; c < logicalRows[r].length; c++) {
         const cell = logicalRows[r][c]
         if (cell.vMerge === 'continue') continue
         const rowspan =
           cell.vMerge === 'restart' ? rowspanOf(r, c, cell.colspan) : 1
+        const gridStart = gridStartOf(r, c)
         const tcPr =
           elementChildren(cell.tc).find(el => el.tagName === 'w:tcPr') || null
         const tcWElement = tcPr?.getElementsByTagName('w:tcW')[0]
@@ -3066,7 +3080,6 @@ class DocxParser {
         )
         const borderTypes: TdBorder[] = []
         if (perCellBorders) {
-          const gridStart = gridStartOf(r, c)
           const gridEnd = gridStart + cell.colspan - 1
           const edges: [TdBorder, boolean | undefined][] = [
             [
@@ -3104,10 +3117,27 @@ class DocxParser {
             : tcW
               ? twipToPx(tcW)
               : undefined
+        const cellWidthPx =
+          width ||
+          colgroup
+            .slice(gridStart, gridStart + cell.colspan)
+            .reduce((sum, col) => sum + col.width, 0) ||
+          undefined
+        let value = trimTrailingBreaks(this.parseBlockContainer(cell.tc, ctx))
+        if (exactHeightPx && cellWidthPx && rowspan === 1) {
+          value = this.clipCellToRowHeight(
+            value,
+            exactHeightPx,
+            cellWidthPx,
+            this.defaultParagraphStyle?.size ||
+              this.defaultRunStyle.size ||
+              16
+          )
+        }
         tdList.push({
           colspan: cell.colspan,
           rowspan,
-          value: trimTrailingBreaks(this.parseBlockContainer(cell.tc, ctx)),
+          value,
           ...(width ? { width } : {}),
           ...(vAlign && verticalAlignMap[vAlign]
             ? { verticalAlign: verticalAlignMap[vAlign] }
@@ -3116,10 +3146,6 @@ class DocxParser {
           ...(perCellBorders ? { borderTypes } : {})
         })
       }
-      const trPr = elementChildren(rows[r]).find(el => el.tagName === 'w:trPr')
-      const trHeight = parseDocxNumber(
-        trPr?.getElementsByTagName('w:trHeight')[0]?.getAttribute('w:val')
-      )
       trList.push({
         // 未声明行高时给一个等于编辑器行高地板的值：paging 布局会按内容撑高
         height: trHeight ? twipToPx(trHeight) : DEFAULT_TABLE_ROW_MIN_HEIGHT,
@@ -3155,6 +3181,98 @@ class DocxParser {
       ...(tableBorderType ? { borderType: tableBorderType } : {}),
       trList
     }
+  }
+
+  // 编辑器行高：字面高 + 上下 basicRowMarginHeight × 字号系数 × rowMargin
+  private cellLineHeight(size: number, rowMargin: number): number {
+    const ratio = size < 12 ? size / 12 : size > 30 ? 1 + (size - 30) / 30 : 1
+    const { ascent, descent } = measureFontMetrics(undefined, size)
+    return ascent + descent + 2 * 8 * ratio * rowMargin
+  }
+
+  // 固定行高（w:hRule="exact"）单元格裁剪：Word 只显示行高范围内的行，
+  // 多余内容被裁掉。按整行（\n 边界）保留，超出预算的行及其后内容丢弃。
+  private clipCellToRowHeight(
+    value: IElement[],
+    rowHeightPx: number,
+    cellWidthPx: number,
+    defaultSize: number
+  ): IElement[] {
+    const budget = rowHeightPx - 5 // 单元格上下内边距（tdPadding 0/5）
+    const usableWidth = Math.max(cellWidthPx - 10, 1)
+    if (budget <= 0 || !value.length) return value
+    // 图片/表格等复杂元素无法按行裁剪，保持原样
+    if (value.some(el => el.type !== undefined && el.type !== ElementType.TEXT)) {
+      return value
+    }
+
+    const lines: { width: number; height: number }[] = []
+    let current = { width: 0, height: 0 }
+    for (const element of value) {
+      const size = element.size || defaultSize
+      const height = this.cellLineHeight(size, element.rowMargin ?? 1)
+      const text = element.value ?? ''
+      let start = 0
+      for (let i = 0; i <= text.length; i++) {
+        if (i < text.length && text[i] !== '\n') continue
+        current.width += measureTextWidth(text.slice(start, i), undefined, size)
+        current.height = Math.max(current.height, height)
+        if (i < text.length) {
+          lines.push(current)
+          current = { width: 0, height: 0 }
+        }
+        start = i + 1
+      }
+    }
+    if (current.width > 0 || current.height > 0) lines.push(current)
+    const lineHeight = (line: { width: number; height: number }) =>
+      line.height * Math.max(1, Math.ceil(line.width / usableWidth))
+    const totalHeight = lines.reduce((sum, line) => sum + lineHeight(line), 0)
+    if (totalHeight <= budget) return value
+
+    let used = 0
+    let keepLines = 0
+    for (const line of lines) {
+      const height = lineHeight(line)
+      if (used + height > budget) break
+      used += height
+      keepLines++
+    }
+    if (keepLines === 0) return value
+
+    // 保留到第 keepLines 个换行符为止（整行裁剪，不切半个段落）
+    let newlines = 0
+    let cut = 0
+    outer: for (const element of value) {
+      const text = element.value ?? ''
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] !== '\n') continue
+        newlines++
+        if (newlines === keepLines) {
+          cut += i + 1
+          break outer
+        }
+      }
+      cut += text.length
+    }
+    if (cut >= value.reduce((sum, el) => sum + (el.value?.length ?? 0), 0)) {
+      return value
+    }
+    const result: IElement[] = []
+    let remaining = cut
+    for (const element of value) {
+      const text = element.value ?? ''
+      if (text.length <= remaining) {
+        result.push(element)
+        remaining -= text.length
+      } else {
+        if (remaining > 0) {
+          result.push({ ...element, value: text.slice(0, remaining) })
+        }
+        break
+      }
+    }
+    return result.length ? result : value
   }
 }
 

@@ -358,6 +358,33 @@ describe('createDocxImporter', () => {
     expect(afterBreak).not.toContain('乙');
   });
 
+  it('固定行高行：超出行高的单元格内容按 Word 语义裁掉，避免撑高拆页', async () => {
+    const p = (text: string) =>
+      `<w:p><w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>${text}</w:t></w:r></w:p>`;
+    const body =
+      `<w:tbl><w:tblPr><w:tblW w:w="3000" w:type="dxa"/></w:tblPr>` +
+      `<w:tblGrid><w:gridCol w:w="3000"/></w:tblGrid>` +
+      `<w:tr><w:trPr><w:cantSplit/><w:trHeight w:hRule="exact" w:val="1050"/></w:trPr>` +
+      `<w:tc><w:tcPr><w:tcW w:w="3000" w:type="dxa"/></w:tcPr>` +
+      p('第一行') +
+      p('第二行') +
+      p('第三行') +
+      p('第二份声明') +
+      `</w:tc></w:tr></w:tbl>`;
+    const buffer = await buildDocx(body);
+    await createDocxImporter(command as unknown as Editor['command'])({
+      arrayBuffer: buffer,
+    });
+
+    const table = importedData().main.find((el) => el.type === 'table');
+    const tr = (table?.trList as Array<Record<string, any>>)[0];
+    const tdText = collectText(tr.tdList[0].value);
+    expect(tdText).toContain('第三行');
+    expect(tdText).not.toContain('第二份声明');
+    // 行高保持固定值（1050 twips -> 70px，仅容得下三行）
+    expect(tr.height).toBe(70);
+  });
+
   it('表格边框：统一边框与混合边框', async () => {
     const allBorders =
       `<w:tblPr><w:tblBorders><w:top w:val="single"/><w:left w:val="single"/><w:bottom w:val="single"/><w:right w:val="single"/><w:insideH w:val="single"/><w:insideV w:val="single"/></w:tblBorders></w:tblPr>`;
