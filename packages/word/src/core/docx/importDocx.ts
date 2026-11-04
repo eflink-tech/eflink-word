@@ -1605,10 +1605,15 @@ class DocxParser {
     }
     for (const child of expandWrappers(container)) {
       if (child.tagName === 'w:p') {
+        // 页首：正文流首段，或上一段以分页符结束（分节符/手动分页），
+        // 此时段落的 pageBreakBefore 已在页首、不再重复分页
+        const isFlowStart =
+          (mainFlow && elementList.length === 0) ||
+          elementList[elementList.length - 1]?.type === ElementType.PAGE_BREAK
         const { elements, trailingBreak } = this.parseParagraph(
           child,
           ctx,
-          mainFlow && elementList.length === 0
+          isFlowStart
         )
         flushBreak(
           elements[0]?.type === ElementType.LIST ||
@@ -1750,18 +1755,16 @@ class DocxParser {
       !isFlowStart && mergedPpr.pageBreakBefore
         ? [{ value: '', type: ElementType.PAGE_BREAK, hide: true }]
         : []
-    // 分节符：仅显式分页类型（nextPage 等）在段落末尾产生分页；
-    // 未声明 type 的分节（Word 视作 nextPage，LibreOffice 不分页）跟随 LibreOffice
+    // 分节符：段落级 sectPr 在节末产生分页。未声明 w:type 时 Word 按
+    // nextPage 处理（LibreOffice 不分页），连续分节（continuous）才不分页
     const sectionBreakType =
       pPr
         ?.getElementsByTagName('w:sectPr')[0]
         ?.getElementsByTagName('w:type')[0]
-        ?.getAttribute('w:val') ?? undefined
+        ?.getAttribute('w:val') ?? 'nextPage'
     const suffix: IElement[] =
       pPr?.getElementsByTagName('w:sectPr').length &&
-      ['nextPage', 'oddPage', 'evenPage', 'nextColumn'].includes(
-        sectionBreakType ?? ''
-      )
+      sectionBreakType !== 'continuous'
         ? [{ value: '', type: ElementType.PAGE_BREAK, hide: true }]
         : []
 

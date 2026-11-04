@@ -307,6 +307,57 @@ describe('createDocxImporter', () => {
     expect(JSON.stringify(data.main)).not.toContain('"size":96');
   });
 
+  it('分节符：未声明 w:type 按 nextPage 分页，且不与段落的 pageBreakBefore 重复', async () => {
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="${W}">
+  <w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="Heading1 No Number"/><w:pPr><w:pageBreakBefore/><w:outlineLvl w:val="0"/></w:pPr></w:style>
+</w:styles>`;
+    const body =
+      `<w:p><w:r><w:t>封面</w:t></w:r></w:p>` +
+      // 封面节末：sectPr 未写 w:type（Word 默认 nextPage）
+      `<w:p><w:pPr><w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr></w:pPr></w:p>` +
+      // 目录标题样式自带 pageBreakBefore，落在一个新页首，不应再补分页
+      `<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>目录</w:t></w:r></w:p>` +
+      `<w:p><w:r><w:t>正文</w:t></w:r></w:p>`;
+    const buffer = await buildDocxPackage({
+      body,
+      wordFiles: { 'styles.xml': styles },
+    });
+    await createDocxImporter(command as unknown as Editor['command'])({
+      arrayBuffer: buffer,
+    });
+
+    const data = importedData();
+    const types = data.main.map((el) => String(el.type ?? 'text'));
+    expect(types.filter((type) => type === 'pageBreak')).toHaveLength(1);
+    const breakIndex = types.indexOf('pageBreak');
+    expect(types.indexOf('title')).toBeGreaterThan(breakIndex);
+    expect(collectText(data.main.slice(breakIndex + 1))).toContain('目录');
+    expect(collectText(data.main.slice(breakIndex + 1))).toContain('正文');
+  });
+
+  it('分节符：continuous 不分页，显式 nextPage 分页', async () => {
+    const sectionParagraph = (type?: string) =>
+      `<w:p><w:pPr><w:sectPr>${type ? `<w:type w:val="${type}"/>` : ''}</w:sectPr></w:pPr></w:p>`;
+    const body =
+      `<w:p><w:r><w:t>甲</w:t></w:r></w:p>` +
+      sectionParagraph('continuous') +
+      `<w:p><w:r><w:t>乙</w:t></w:r></w:p>` +
+      sectionParagraph('nextPage') +
+      `<w:p><w:r><w:t>丙</w:t></w:r></w:p>`;
+    const buffer = await buildDocx(body);
+    await createDocxImporter(command as unknown as Editor['command'])({
+      arrayBuffer: buffer,
+    });
+
+    const data = importedData();
+    const types = data.main.map((el) => String(el.type ?? 'text'));
+    expect(types.filter((type) => type === 'pageBreak')).toHaveLength(1);
+    const afterBreak = collectText(data.main.slice(types.indexOf('pageBreak') + 1));
+    expect(afterBreak).toContain('丙');
+    expect(afterBreak).not.toContain('乙');
+  });
+
   it('表格边框：统一边框与混合边框', async () => {
     const allBorders =
       `<w:tblPr><w:tblBorders><w:top w:val="single"/><w:left w:val="single"/><w:bottom w:val="single"/><w:right w:val="single"/><w:insideH w:val="single"/><w:insideV w:val="single"/></w:tblBorders></w:tblPr>`;
