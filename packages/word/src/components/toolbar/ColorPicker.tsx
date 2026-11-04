@@ -1,6 +1,6 @@
 // 字体颜色 / 高亮 / 底纹颜色 — 纯受控 UI 层，由 Toolbar 连接 canvas-editor command
-// - color/highlight：Toolbar 连接 executeColor / executeHighlight
-// - shading：canvas-editor 无对应命令，Toolbar 以本地 state 包装保持视觉一致
+// canvas-editor 只有 executeHighlight 一个背景命令；导入导出也把 w:highlight 与 w:shd
+// 统一映射到 element.highlight，因此 color 走 executeColor，highlight/shading 都走 executeHighlight
 import { useState, useRef, useCallback } from 'react';
 import { useI18n } from '@eflink-tech/office-kit';
 import { RECENT_COLORS_KEY_PREFIX } from '../../storage/keys';

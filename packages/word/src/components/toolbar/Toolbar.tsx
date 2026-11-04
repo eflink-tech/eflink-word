@@ -80,23 +80,6 @@ function Placeholder({
   );
 }
 
-/**
- * 底纹颜色：canvas-editor 没有对应命令，仅本地 state 维护图标下色条的视觉反馈；
- * 以独立包装隔离本地 UI 状态，保持 ColorPicker 自身的纯受控语义
- */
-function ShadingColorPicker() {
-  const [color, setColor] = useState<string | null>(null);
-  return (
-    <ColorPicker
-      mode="shading"
-      value={color}
-      onSelect={(c) => setColor(c)}
-      onDefault={() => setColor(null)}
-    />
-  );
-}
-
-
 function OverflowBar({
   items,
   open,
@@ -454,7 +437,18 @@ export function Toolbar({ editor }: ToolbarProps) {
           />
         ),
       },
-      { key: 'shading', collapsible: true, node: <ShadingColorPicker /> },
+      {
+        key: 'shading',
+        collapsible: true,
+        node: (
+          <ColorPicker
+            mode="shading"
+            value={rangeStyle?.highlight ?? null}
+            onSelect={(color) => editor?.command.executeHighlight(color)}
+            onDefault={() => editor?.command.executeHighlight(null)}
+          />
+        ),
+      },
       {
         key: 'font-color',
         collapsible: true,
