@@ -455,6 +455,8 @@ interface ZoneContext {
   }
   // 所在区域：页脚中的 PAGE/NUMPAGES 域转换为编辑器页码配置
   zone?: 'main' | 'header' | 'footer'
+  // 可用行宽（px）：表格单元格内为单元格内容宽，缺省按纸张版心宽
+  width?: number
 }
 
 // docx 边框类型 -> 编辑器分隔线（dashArray 为 Canvas 虚线段格式）
@@ -585,6 +587,36 @@ function trimTrailingBreaks(elementList: IElement[]): IElement[] {
     break
   }
   return elementList
+}
+
+// 段落换行元素所在行会与下一段首行合并计高；若换行沿用大字号/大行距
+// （标题、带段距的正文），下一段首行会被撑高。把换行拆成独立的中性元素，
+// 段落的行高只由本段内容决定。
+function splitTrailingBreaks(elementList: IElement[]): void {
+  for (let i = 0; i < elementList.length; i++) {
+    const element = elementList[i]
+    if (element.type === ElementType.TABLE && element.trList) {
+      for (const tr of element.trList) {
+        for (const td of tr.tdList) splitTrailingBreaks(td.value)
+      }
+      continue
+    }
+    if (element.valueList?.length) splitTrailingBreaks(element.valueList)
+    if (
+      typeof element.value === 'string' &&
+      element.value.length > 1 &&
+      element.value.endsWith('\n')
+    ) {
+      element.value = element.value.replace(/\n+$/, '')
+      elementList.splice(i + 1, 0, {
+        value: '\n',
+        type: ElementType.TEXT,
+        size: 1,
+        rowMargin: 0
+      })
+      i += 1
+    }
+  }
 }
 
 function appendLineBreak(elements: IElement[], style: RunStyle) {
@@ -914,8 +946,17 @@ class DocxParser {
   // numId -> 每级列表类型（null = 该级无编号标记，按普通段落处理）
   private listTypeByNumId = new Map<
     string,
-    ({ listType: ListType; listStyle?: ListStyle } | null)[]
+    ({ listType: ListType; listStyle?: ListStyle; start?: number } | null)[]
   >()
+  // 有序列表续号：Word 常用多个 numId + 递增的 w:start 拼出一条序列
+  // （每个段落各自成"列表"），编辑器按 listId 计数编号，需归并到同一条
+  private orderedListRun: {
+    listId: string
+    level: number
+    numId: string
+    next: number
+  } | null = null
+  private listIdSeq = 0
   private theme: ThemeContext = EMPTY_THEME
   private defaultRunStyle: RunStyle = {}
   // docDefaults / Normal 的 pPr，参与段落属性合并链
@@ -946,6 +987,8 @@ class DocxParser {
     height: number
     margins: [number, number, number, number]
   } | null = null
+  // 纸张尺寸（即使 sectPr 未声明页边距也记录，用于估算段落行数）
+  private pageSizePx: { width: number; height: number } | null = null
   // document.xml 的关系缓存（页眉/页脚/图片引用解析共用）
   private documentRels: {
     internal: Map<string, string>
@@ -1076,6 +1119,7 @@ class DocxParser {
       if (width && height) {
         setup.width = width
         setup.height = height
+        this.pageSizePx = { width, height }
         setup.paperDirection =
           pgSz.getAttribute('w:orient') === 'landscape'
             ? 'horizontal'
@@ -1286,7 +1330,7 @@ class DocxParser {
     )
     const levelListByAbstractId = new Map<
       string,
-      ({ listType: ListType; listStyle?: ListStyle } | null)[]
+      ({ listType: ListType; listStyle?: ListStyle; start?: number } | null)[]
     >()
     for (const abstractNum of Array.from(
       dom.getElementsByTagName('w:abstractNum')
@@ -1295,7 +1339,11 @@ class DocxParser {
       const lvlElements = elementChildren(abstractNum).filter(
         child => child.tagName === 'w:lvl'
       )
-      const levels: ({ listType: ListType; listStyle?: ListStyle } | null)[] = []
+      const levels: ({
+        listType: ListType
+        listStyle?: ListStyle
+        start?: number
+      } | null)[] = []
       for (const lvl of lvlElements) {
         const numFmt = lvl
           .getElementsByTagName('w:numFmt')[0]
@@ -1304,10 +1352,17 @@ class DocxParser {
           levels.push(null)
           continue
         }
+        const start = parseDocxNumber(
+          lvl.getElementsByTagName('w:start')[0]?.getAttribute('w:val')
+        )
         if (numFmt === 'bullet') {
           levels.push({ listType: ListType.UL, listStyle: bulletStyleOf(lvl) })
         } else {
-          levels.push({ listType: ListType.OL, listStyle: ListStyle.DECIMAL })
+          levels.push({
+            listType: ListType.OL,
+            listStyle: ListStyle.DECIMAL,
+            ...(start ? { start } : {})
+          })
         }
       }
       levelListByAbstractId.set(
@@ -1788,11 +1843,7 @@ class DocxParser {
       this.defaultRunStyle.size ||
       16
     const props = this.parseParagraphProps(mergedPpr, fontSize)
-    // 无显式行距段落的回退：按文档默认段落行距换算（与表格行高地板同一口径）
-    const paragraphRowMargin =
-      props.rowMargin ?? this.fallbackRowMargin(fontSize)
-    // 段前/段后间距：附加到段首/段尾元素的行高。
-    // 页首（正文流首段或 pageBreakBefore 之后）Word/LO 丢弃段前间距
+    // 段前/段后间距：页首（正文流首段或 pageBreakBefore 之后）Word/LO 丢弃段前间距
     const beforeExtra = this.paragraphSpacingRowMargin(
       isFlowStart || mergedPpr.pageBreakBefore ? 0 : mergedPpr.before || 0,
       fontSize
@@ -1801,10 +1852,22 @@ class DocxParser {
       mergedPpr.after || 0,
       fontSize
     )
-    const withSpacing = (element: IElement, extra: number): IElement =>
-      extra > 0
-        ? { ...element, rowMargin: round2((element.rowMargin ?? 1) + extra) }
-        : element
+    // 编辑器没有段落间距属性，rowMargin 会作用于段落的每一行。把段前/段后
+    // 间距按估算行数摊到各行，段落总高与 Word 一致，避免逐行加倍撑高
+    const baseRowMargin =
+      props.rowMargin ?? this.fallbackRowMargin(fontSize) ?? 0
+    const spacingExtra =
+      beforeExtra + afterExtra > 0
+        ? round2(
+            (beforeExtra + afterExtra) /
+              this.estimateParagraphLines(
+                inline,
+                fontSize,
+                this.paragraphAvailableWidth(mergedPpr, ctx)
+              )
+          )
+        : 0
+    const paragraphRowMargin = round2(baseRowMargin + spacingExtra)
 
     // 列表段落：官方壳结构（valueList 扁平流：行首 \n + 内容，项间单换行）
     const numId = mergedPpr.numId
@@ -1814,6 +1877,8 @@ class DocxParser {
       const levelInfo = levels?.[ilvl] ?? levels?.[levels.length - 1] ?? null
       if (levelInfo) {
         const { listType: type, listStyle } = levelInfo
+        const start = levelInfo.start ?? 1
+        const listId = this.resolveListId(numId, type, ilvl, start)
         const withRowMargin = (element: IElement): IElement =>
           this.applyParagraphStyle(element, undefined, paragraphRowMargin)
         const valueList: IElement[] = [withRowMargin({ value: '\n' })]
@@ -1836,20 +1901,13 @@ class DocxParser {
             valueList.push(withRowMargin(element))
           }
         }
-        if (beforeExtra > 0)
-          valueList[0] = withSpacing(valueList[0], beforeExtra)
-        if (afterExtra > 0)
-          valueList[valueList.length - 1] = withSpacing(
-            valueList[valueList.length - 1],
-            afterExtra
-          )
         return {
           elements: [
             ...prefix,
             {
               value: '',
               type: ElementType.LIST,
-              listId: numId || '1',
+              listId,
               listType: type,
               ...(listStyle ? { listStyle } : {}),
               listLevel: ilvl,
@@ -1898,15 +1956,6 @@ class DocxParser {
             paragraphRowMargin
           )
         )
-      if (valueList.length) {
-        if (beforeExtra > 0)
-          valueList[0] = withSpacing(valueList[0], beforeExtra)
-        if (afterExtra > 0)
-          valueList[valueList.length - 1] = withSpacing(
-            valueList[valueList.length - 1],
-            afterExtra
-          )
-      }
       return {
         elements: [
           ...prefix,
@@ -1916,9 +1965,7 @@ class DocxParser {
             level: headingLevel,
             size: fontSize,
             ...(props.rowFlex ? { rowFlex: props.rowFlex } : {}),
-            ...(paragraphRowMargin !== undefined
-              ? { rowMargin: paragraphRowMargin }
-              : {}),
+            rowMargin: paragraphRowMargin,
             valueList
           },
           ...suffix
@@ -1947,34 +1994,17 @@ class DocxParser {
     const lineElements: IElement[] = indentedInline.map(element =>
       this.applyParagraphStyle(element, props.rowFlex, paragraphRowMargin)
     )
-    if (lineElements.length) {
-      if (beforeExtra > 0)
-        lineElements[0] = withSpacing(lineElements[0], beforeExtra)
-      if (afterExtra > 0)
-        lineElements[lineElements.length - 1] = withSpacing(
-          lineElements[lineElements.length - 1],
-          afterExtra
-        )
-    }
     if (!lineElements.length) {
       // \n 为行结束标记，不携带 rowFlex（编辑器断行时 \n 归入下一行，
       // 携带对齐会污染下一行的行首对齐）
       return {
         elements: [
           ...prefix,
-          withSpacing(
-            withSpacing(
-              {
-                value: '\n',
-                type: ElementType.TEXT,
-                ...(paragraphRowMargin !== undefined
-                  ? { rowMargin: paragraphRowMargin }
-                  : {})
-              },
-              beforeExtra
-            ),
-            afterExtra
-          ),
+          {
+            value: '\n',
+            type: ElementType.TEXT,
+            rowMargin: paragraphRowMargin
+          },
           ...suffix
         ],
         trailingBreak: false
@@ -2276,6 +2306,84 @@ class DocxParser {
       return this.spacingRowMargin(240, 'auto', fontSize)
     }
     return this.spacingRowMargin(line, defaults?.lineRule ?? 'auto', fontSize)
+  }
+
+  // 有序列表续号：Word 可能用多个 numId + 递增 w:start 拼一条序列，
+  // 编辑器按 listId 逐项计数，起始值续得上就复用同一条列表
+  private resolveListId(
+    numId: string,
+    type: ListType,
+    level: number,
+    start: number
+  ): string {
+    if (type !== ListType.OL) return numId || '1'
+    const run = this.orderedListRun
+    if (run && run.level === level) {
+      if (run.numId === numId) {
+        run.next += 1
+        return run.listId
+      }
+      if (start === run.next) {
+        run.numId = numId
+        run.next = start + 1
+        return run.listId
+      }
+    }
+    const listId = `ol-${++this.listIdSeq}`
+    this.orderedListRun = { listId, level, numId, next: start + 1 }
+    return listId
+  }
+
+  // 段落可用行宽（px）：单元格内为内容宽，正文按纸张版心扣除左缩进
+  private paragraphAvailableWidth(
+    props: PprProps,
+    ctx: ZoneContext
+  ): number | undefined {
+    const indentPx = (props.left || 0) / TWIP_PER_PX
+    if (ctx.width) return Math.max(ctx.width - indentPx, 1)
+    const geometry = this.pageGeometry
+    if (geometry) {
+      const innerWidth =
+        geometry.width - geometry.margins[1] - geometry.margins[3]
+      return Math.max(innerWidth - indentPx, 1)
+    }
+    // 未声明页边距：Word 默认左右约 3.17cm，与编辑器默认 margins 120 一致
+    const width = this.pageSizePx?.width ?? 794
+    return Math.max(width - 240 - indentPx, 1)
+  }
+
+  // 段落行数估算（按文本宽度/可用宽，硬换行单独计行），用于摊分段前段后
+  private estimateParagraphLines(
+    inline: IElement[],
+    fontSize: number,
+    availableWidth?: number
+  ): number {
+    if (!availableWidth || availableWidth <= 0) return 1
+    const runs: { text: string; size: number }[] = []
+    const collect = (elements: IElement[]) => {
+      for (const element of elements) {
+        if (element.valueList?.length) {
+          collect(element.valueList)
+          continue
+        }
+        runs.push({ text: element.value ?? '', size: element.size || fontSize })
+      }
+    }
+    collect(inline)
+    let lines = 0
+    let width = 0
+    for (const run of runs) {
+      const parts = run.text.split('\n')
+      for (let i = 0; i < parts.length; i++) {
+        width += measureTextWidth(parts[i], undefined, run.size)
+        if (i < parts.length - 1) {
+          lines += Math.max(1, Math.ceil(width / availableWidth))
+          width = 0
+        }
+      }
+    }
+    if (width > 0) lines += Math.max(1, Math.ceil(width / availableWidth))
+    return Math.max(lines, 1)
   }
 
   // 行内元素套用段落行属性（对齐/行距）；超链接 valueList 子元素也要套
@@ -3123,7 +3231,12 @@ class DocxParser {
             .slice(gridStart, gridStart + cell.colspan)
             .reduce((sum, col) => sum + col.width, 0) ||
           undefined
-        let value = trimTrailingBreaks(this.parseBlockContainer(cell.tc, ctx))
+        let value = trimTrailingBreaks(
+          this.parseBlockContainer(
+            cell.tc,
+            cellWidthPx ? { ...ctx, width: cellWidthPx - 10 } : ctx
+          )
+        )
         if (exactHeightPx && cellWidthPx && rowspan === 1) {
           value = this.clipCellToRowHeight(
             value,
@@ -3294,6 +3407,9 @@ export function createDocxImporter(command: Command) {
       zoneOffsets,
       ...data
     } = await parser.parse()
+    splitTrailingBreaks(data.main || [])
+    splitTrailingBreaks(data.header || [])
+    splitTrailingBreaks(data.footer || [])
     // 追加模式：仅插入正文到文档末尾，不覆盖已有内容
     if (isAppend) {
       const commandAny = command as unknown as {

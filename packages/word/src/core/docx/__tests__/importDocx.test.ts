@@ -454,6 +454,63 @@ describe('createDocxImporter', () => {
     expect(data.main.filter((el) => el.type === 'list').length).toBe(1);
   });
 
+  it('有序列表：多个 numId 按 w:start 续号时共用一个 listId', async () => {
+    const levels = (start: number) =>
+      `<w:lvl w:ilvl="0"><w:start w:val="${start}"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/></w:lvl>`;
+    const numbering = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="${W}">
+  <w:abstractNum w:abstractNumId="1">${levels(1)}</w:abstractNum>
+  <w:abstractNum w:abstractNumId="2">${levels(2)}</w:abstractNum>
+  <w:abstractNum w:abstractNumId="3">${levels(3)}</w:abstractNum>
+  <w:abstractNum w:abstractNumId="4">${levels(1)}</w:abstractNum>
+  <w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num>
+  <w:num w:numId="2"><w:abstractNumId w:val="2"/></w:num>
+  <w:num w:numId="3"><w:abstractNumId w:val="3"/></w:num>
+  <w:num w:numId="4"><w:abstractNumId w:val="4"/></w:num>
+</w:numbering>`;
+    const item = (numId: number, text: string) =>
+      `<w:p><w:pPr><w:numPr><w:numId w:val="${numId}"/></w:numPr></w:pPr><w:r><w:t>${text}</w:t></w:r></w:p>`;
+    const buffer = await buildDocxPackage({
+      body:
+        item(1, '甲') + item(2, '乙') + item(3, '丙') + item(4, '重新开始'),
+      wordFiles: { 'numbering.xml': numbering },
+    });
+    await createDocxImporter(command as unknown as Editor['command'])({
+      arrayBuffer: buffer,
+    });
+
+    const lists = importedData().main.filter(
+      (el) => el.type === 'list',
+    ) as Array<Record<string, any>>;
+    expect(lists).toHaveLength(4);
+    // 前三项 start 连续（1、2、3）→ 同一条序列，编辑器按 listId 递增编号
+    expect(lists[1].listId).toBe(lists[0].listId);
+    expect(lists[2].listId).toBe(lists[0].listId);
+    // start 回到 1 → 新列表
+    expect(lists[3].listId).not.toBe(lists[0].listId);
+  });
+
+  it('段落换行拆为中性元素，下一段首行不继承标题行高', async () => {
+    const buffer = await buildDocx(
+      `<w:p><w:pPr><w:spacing w:before="480" w:after="480" w:line="288" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:sz w:val="52"/></w:rPr><w:t>大标题</w:t></w:r></w:p>` +
+        `<w:p><w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:t>正文第一行</w:t></w:r></w:p>`,
+    );
+    await createDocxImporter(command as unknown as Editor['command'])({
+      arrayBuffer: buffer,
+    });
+
+    const main = importedData().main as Array<Record<string, any>>;
+    const bodyIndex = main.findIndex((el) => el.value === '正文第一行');
+    expect(bodyIndex).toBeGreaterThan(0);
+    // 标题文本不再携带尾换行，换行由独立的中性元素承担
+    expect(main[0].value).toBe('大标题');
+    expect(main[1]).toMatchObject({ value: '\n', size: 1, rowMargin: 0 });
+    const breakElement = main[bodyIndex + 1] as Record<string, any>;
+    expect(breakElement.value).toBe('\n');
+    expect(breakElement.size).toBe(1);
+    expect(breakElement.rowMargin).toBe(0);
+  });
+
   it('缺少 word/document.xml 时抛出无效文件错误', async () => {
     const zip = new JSZip();
     zip.file('[Content_Types].xml', CONTENT_TYPES_PLACEHOLDER);
