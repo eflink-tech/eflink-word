@@ -1,5 +1,5 @@
 diff --git a/dist/canvas-editor.js b/dist/canvas-editor.js
-index cb52eef6147a01c75146b94cacf54d14cd5c1af6..f00eb428f7350fad437b30ada471d320450a8cea 100644
+index cb52eef6147a01c75146b94cacf54d14cd5c1af6..22e27ec064ebe9a1356d31f3e885ea00401446e5 100644
 --- a/dist/canvas-editor.js
 +++ b/dist/canvas-editor.js
 @@ -4497,7 +4497,10 @@ function vn(e) {
@@ -143,7 +143,19 @@ index cb52eef6147a01c75146b94cacf54d14cd5c1af6..f00eb428f7350fad437b30ada471d320
  				n && T && n.columnIndex !== void 0 && (n.columnIndex = I), z.left = 0, E = this.position.setSurroundPosition({
  					pageNo: O,
  					rowElement: z,
-@@ -20813,7 +20845,7 @@ var Js = class {
+@@ -17451,7 +17483,10 @@ var to = class {
+ 			for (let c = 0; c < this.rowList.length; c++) {
+ 				let l = this.rowList[c], u = l.offsetY || 0;
+ 				if (s !== void 0 && l.columnIndex !== void 0 && l.columnIndex > 0 && l.columnIndex !== s) o = this.getMainOuterHeight(i, r) + l.height + u, e[i].push(l);
+-				else if (l.height + u + o > a || this.rowList[c - 1]?.isPageBreak) {
++				// 页底行尾留 2px 余量：Word 的行盒含额外行距，紧贴版心的末行 Word 会
++				// 排到下一页；编辑器按字面盒计高会把这行挤进页底（如模板1第1页第4条）。
++				// 只收紧单栏文本行，表格分片/分页符/多栏不受影响。
++				else if (l.height + u + o + (!l.isPageBreak && l.columnIndex === void 0 && l.elementList?.[0]?.type === H.TEXT ? 2 : 0) > a || this.rowList[c - 1]?.isPageBreak) {
+ 					if (Number.isInteger(n) && i >= n) {
+ 						let e = l.tableFragment, t = this.elementList[l.startIndex];
+ 						this.elementList = e && t?.type === H.TABLE && this.tablePaging.truncateTableByFragment(t, e, this.elementList) ? this.elementList.slice(0, l.startIndex + 1) : this.elementList.slice(0, l.startIndex);
+@@ -20813,7 +20848,7 @@ var Js = class {
  			footer: s,
  			graffiti: c
  		}, this.listener, this.eventBus, this.override);
