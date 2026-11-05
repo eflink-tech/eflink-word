@@ -7,7 +7,6 @@ describe('recentStorageKeyForMode', () => {
   it('maps each mode to a distinct storage key', () => {
     expect(recentStorageKeyForMode('color')).toBe('doculuma:word:recent-colors:color');
     expect(recentStorageKeyForMode('highlight')).toBe('doculuma:word:recent-colors:highlight');
-    expect(recentStorageKeyForMode('shading')).toBe('doculuma:word:recent-colors:shading');
   });
 });
 
@@ -16,17 +15,17 @@ describe('toolbar ColorPicker', () => {
     localStorage.clear();
   });
 
-  it('shading mode updates bar color via controlled value', () => {
+  it('highlight mode updates bar color via controlled value', () => {
     const onSelect = vi.fn();
     const onDefault = vi.fn();
     const { rerender } = render(
-      <ColorPicker mode="shading" value={null} onSelect={onSelect} onDefault={onDefault} />,
+      <ColorPicker mode="highlight" value={null} onSelect={onSelect} onDefault={onDefault} />,
     );
 
     const bar = screen.getByTestId('toolbar-color-bar');
     expect(bar).toHaveStyle({ backgroundColor: 'rgb(255, 255, 255)' });
 
-    fireEvent.click(screen.getByRole('button', { name: '底纹颜色' }));
+    fireEvent.click(screen.getByRole('button', { name: '高亮' }));
 
     const themeButtons = screen.getAllByTestId('theme-color');
     fireEvent.click(themeButtons[1]!);
@@ -36,21 +35,21 @@ describe('toolbar ColorPicker', () => {
 
     // 父组件将 value 更新为 '#000000' 后，色条随之变化
     rerender(
-      <ColorPicker mode="shading" value="#000000" onSelect={onSelect} onDefault={onDefault} />,
+      <ColorPicker mode="highlight" value="#000000" onSelect={onSelect} onDefault={onDefault} />,
     );
     expect(bar).toHaveStyle({ backgroundColor: 'rgb(0, 0, 0)' });
   });
 
-  it('shading advanced panel select pushes recent', () => {
-    const key = recentStorageKeyForMode('shading');
+  it('highlight advanced panel select pushes recent', () => {
+    const key = recentStorageKeyForMode('highlight');
     const onSelect = vi.fn();
     const onDefault = vi.fn();
 
     render(
-      <ColorPicker mode="shading" value={null} onSelect={onSelect} onDefault={onDefault} />,
+      <ColorPicker mode="highlight" value={null} onSelect={onSelect} onDefault={onDefault} />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '底纹颜色' }));
+    fireEvent.click(screen.getByRole('button', { name: '高亮' }));
     fireEvent.click(screen.getByRole('button', { name: /更多颜色/ }));
 
     const hexInput = screen.getByLabelText('Hex');

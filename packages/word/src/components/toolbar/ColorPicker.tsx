@@ -1,19 +1,14 @@
-// 字体颜色 / 高亮 / 底纹颜色 — 纯受控 UI 层，由 Toolbar 连接 canvas-editor command
+// 字体颜色 / 高亮 — 纯受控 UI 层，由 Toolbar 连接 canvas-editor command
 // canvas-editor 只有 executeHighlight 一个背景命令；导入导出也把 w:highlight 与 w:shd
-// 统一映射到 element.highlight，因此 color 走 executeColor，highlight/shading 都走 executeHighlight
+// 统一映射到 element.highlight，因此 color 走 executeColor，highlight 走 executeHighlight
 import { useState, useRef, useCallback } from 'react';
 import { useI18n } from '@eflink-tech/office-kit';
 import { RECENT_COLORS_KEY_PREFIX } from '../../storage/keys';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { ColorPicker as StandaloneColorPicker, type ColorSelectOptions } from '../../components/color';
-import {
-  WordHighlightIcon,
-  WordFontColorIcon,
-  WordShadingIcon,
-  WordCaretDown,
-} from '../../components/icons/wordIcons';
+import { WordHighlightIcon, WordFontColorIcon, WordCaretDown } from '../../components/icons/wordIcons';
 
-export type ToolbarColorMode = 'color' | 'highlight' | 'shading';
+export type ToolbarColorMode = 'color' | 'highlight';
 
 interface ColorPickerProps {
   /** 当前颜色值（null 表示默认） */
@@ -33,7 +28,6 @@ export function recentStorageKeyForMode(mode: ToolbarColorMode): string {
 const MODE_TITLE_KEYS: Record<ToolbarColorMode, string> = {
   color: 'word.tb.fontColor',
   highlight: 'word.tb.highlight',
-  shading: 'word.tb.shading',
 };
 
 export function ColorPicker({ value, onSelect, onDefault, mode }: ColorPickerProps) {
@@ -57,8 +51,7 @@ export function ColorPicker({ value, onSelect, onDefault, mode }: ColorPickerPro
     setOpen(false);
   };
 
-  const Icon =
-    mode === 'color' ? WordFontColorIcon : mode === 'highlight' ? WordHighlightIcon : WordShadingIcon;
+  const Icon = mode === 'color' ? WordFontColorIcon : WordHighlightIcon;
 
   return (
     <div ref={wrapperRef} className="relative shrink-0">

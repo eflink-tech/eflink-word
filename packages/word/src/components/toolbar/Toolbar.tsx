@@ -39,7 +39,6 @@ import {
   WordPhoneticIcon,
   WordFontScalingIcon,
   WordLetterSpacingIcon,
-  WordFontSettingsIcon,
   WordBulletListIcon,
   WordNumberedListIcon,
   WordTaskListIcon,
@@ -423,7 +422,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         ),
       },
     ],
-    // 高亮 / 底纹 / 字体颜色 / 字体设置
+    // 高亮 / 字体颜色
     [
       {
         key: 'highlight',
@@ -431,18 +430,6 @@ export function Toolbar({ editor }: ToolbarProps) {
         node: (
           <ColorPicker
             mode="highlight"
-            value={rangeStyle?.highlight ?? null}
-            onSelect={(color) => editor?.command.executeHighlight(color)}
-            onDefault={() => editor?.command.executeHighlight(null)}
-          />
-        ),
-      },
-      {
-        key: 'shading',
-        collapsible: true,
-        node: (
-          <ColorPicker
-            mode="shading"
             value={rangeStyle?.highlight ?? null}
             onSelect={(color) => editor?.command.executeHighlight(color)}
             onDefault={() => editor?.command.executeHighlight(null)}
@@ -461,7 +448,6 @@ export function Toolbar({ editor }: ToolbarProps) {
           />
         ),
       },
-      { key: 'font-settings', collapsible: true, node: <Placeholder icon={WordFontSettingsIcon} label={t('word.tb.fontSettings')} /> },
     ],
     // 列表 / 缩进 / 对齐 / 上下标·字符 / 行距 / 引用 / 高亮块 / 段落设置
     [
