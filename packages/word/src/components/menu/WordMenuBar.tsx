@@ -1,18 +1,13 @@
 // Word 主菜单：横向菜单栏（对齐统一后的 office-kit 顶栏），保留原汉堡菜单的全部动作与弹窗。
 import { useState } from 'react';
-import { flushSync } from 'react-dom';
 import {
   AlignJustify,
   Calendar,
   Code,
-  Download,
   Droplet,
-  FileDown,
   FileInput,
-  FileOutput,
   FilePlus2,
   FileText,
-  ImageDown,
   ImagePlus,
   Keyboard,
   Link as LinkIcon,
@@ -39,7 +34,6 @@ import type Editor from '@hufe921/canvas-editor';
 import { PageMode } from '@hufe921/canvas-editor';
 import {
   OfficeHeader,
-  resolveErrorMessage,
   useI18n,
   type OfficeMenu,
 } from '@eflink-tech/office-kit';
@@ -51,12 +45,11 @@ import { useImageInsert, useLinkDialog } from '../toolbar/useInsertActions';
 import { WatermarkModal } from '../toolbar/WatermarkModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { ErrorDialog } from '../common/ErrorDialog';
+import { ExportDialog } from '../common/ExportDialog';
 import { ImportDialog } from '../common/ImportDialog';
-import { LoadingDialog } from '../common/LoadingDialog';
 import { RenameDialog } from '../common/RenameDialog';
 import { ShortcutsDialog } from '../common/ShortcutsDialog';
 import { formatDateInsert, type DateInsertFormat } from '../../core/utils/dateInsert';
-import { exportEfword, exportImage, exportPdf } from '../../core/utils/exportImport';
 
 const ICON = 16;
 
@@ -94,10 +87,8 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
   const [confirmNewDoc, setConfirmNewDoc] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [pdfExporting, setPdfExporting] = useState(false);
-  const [imageExporting, setImageExporting] = useState(false);
-  const [docxExporting, setDocxExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { open: openImagePicker, input: imageInput } = useImageInsert(editor);
@@ -122,61 +113,6 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
 
   const saveNow = () => {
     void useEditorStore.getState().save();
-  };
-
-  const exportEfwordFile = async () => {
-    if (!editor) return;
-    try {
-      await exportEfword(editor, getDocTitle());
-    } catch (err) {
-      console.error('导出文档失败:', err);
-      setErrorMessage(resolveErrorMessage(err, t, 'word.error.efwExport'));
-    }
-  };
-
-  const exportPdfFile = async () => {
-    if (!editor || pdfExporting) return;
-    flushSync(() => setPdfExporting(true));
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => resolve());
-    });
-    try {
-      await exportPdf(editor, getDocTitle());
-    } catch (err) {
-      console.error('导出 PDF 失败:', err);
-      setErrorMessage(resolveErrorMessage(err, t, 'word.error.pdfExport'));
-    } finally {
-      setPdfExporting(false);
-    }
-  };
-
-  const exportImageFile = async () => {
-    if (!editor || imageExporting) return;
-    flushSync(() => setImageExporting(true));
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => resolve());
-    });
-    try {
-      await exportImage(editor, getDocTitle());
-    } catch (err) {
-      console.error('导出图片失败:', err);
-      setErrorMessage(resolveErrorMessage(err, t, 'word.error.imageExport'));
-    } finally {
-      setImageExporting(false);
-    }
-  };
-
-  const exportDocxFile = async () => {
-    if (!editor || docxExporting) return;
-    flushSync(() => setDocxExporting(true));
-    try {
-      const { exportDocx } = await import('../../core/docx');
-      await exportDocx(editor, getDocTitle());
-    } catch (err) {
-      setErrorMessage(resolveErrorMessage(err, t, 'word.error.exportDocx'));
-    } finally {
-      setDocxExporting(false);
-    }
   };
 
   const insertDate = (format: DateInsertFormat) => {
@@ -240,28 +176,10 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
       ],
       [
         {
-          key: 'export-docx',
-          label: t('word.menu.exportDocx'),
-          icon: menuIcon(<FileOutput size={ICON} />),
-          onSelect: exportDocxFile,
-        },
-        {
-          key: 'export-efword',
-          label: t('word.menu.exportData'),
-          icon: menuIcon(<Download size={ICON} />),
-          onSelect: exportEfwordFile,
-        },
-        {
-          key: 'export-pdf',
-          label: t('action.exportPdf'),
-          icon: menuIcon(<FileDown size={ICON} />),
-          onSelect: exportPdfFile,
-        },
-        {
-          key: 'export-image',
-          label: t('action.exportImage'),
-          icon: menuIcon(<ImageDown size={ICON} />),
-          onSelect: exportImageFile,
+          key: 'export',
+          label: t('word.menu.export'),
+          icon: menuIcon(<FileText size={ICON} />),
+          onSelect: () => setExportOpen(true),
         },
       ],
       [
@@ -584,9 +502,9 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
         />
       )}
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
-      {pdfExporting && <LoadingDialog message={t('word.loading.exportPdf')} />}
-      {imageExporting && <LoadingDialog message={t('word.loading.exportImage')} />}
-      {docxExporting && <LoadingDialog message={t('word.loading.exportDocx')} />}
+      {exportOpen && editor && (
+        <ExportDialog editor={editor} title={getDocTitle()} onClose={() => setExportOpen(false)} />
+      )}
       {errorMessage && (
         <ErrorDialog title={t('word.error.title')} message={errorMessage} onClose={() => setErrorMessage(null)} />
       )}
