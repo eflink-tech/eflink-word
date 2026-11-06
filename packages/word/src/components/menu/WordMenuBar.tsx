@@ -2,15 +2,16 @@
 import { useState } from 'react';
 import {
   AlignJustify,
+  Ban,
   Calendar,
   Code,
+  Download,
   Droplet,
-  FileInput,
   FilePlus2,
   FileText,
   ImagePlus,
   Keyboard,
-  Link as LinkIcon,
+  Link2,
   Minus,
   MousePointer2,
   PanelLeft,
@@ -24,9 +25,10 @@ import {
   Settings2,
   Sparkles,
   SplitSquareHorizontal,
-  Table,
+  Table2,
   Undo2,
   Unlink,
+  Upload,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -170,7 +172,7 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
         {
           key: 'import',
           label: t('word.menu.import'),
-          icon: menuIcon(<FileInput size={ICON} />),
+          icon: menuIcon(<Upload size={ICON} />),
           onSelect: () => setImportOpen(true),
         },
       ],
@@ -178,7 +180,7 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
         {
           key: 'export',
           label: t('word.menu.export'),
-          icon: menuIcon(<FileText size={ICON} />),
+          icon: menuIcon(<Download size={ICON} />),
           onSelect: () => setExportOpen(true),
         },
       ],
@@ -258,7 +260,7 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
         {
           key: 'table',
           label: t('word.insert.table'),
-          icon: menuIcon(<Table size={ICON} />),
+          icon: menuIcon(<Table2 size={ICON} />),
           onSelect: () => editor?.command.executeInsertTable(3, 3),
         },
         {
@@ -270,7 +272,7 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
         {
           key: 'link',
           label: t('word.insert.link'),
-          icon: menuIcon(<LinkIcon size={ICON} />),
+          icon: menuIcon(<Link2 size={ICON} />),
           onSelect: linkDialog.openInsert,
         },
         ...(linkDialogHasLink(editor)
@@ -330,6 +332,7 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
               {
                 key: 'watermark-set',
                 label: watermark ? t('word.insert.watermarkEdit') : t('word.insert.watermarkAdd'),
+                icon: menuIcon(<Droplet size={ICON} />),
                 onSelect: () => setWatermarkOpen(true),
               },
               ...(watermark
@@ -337,6 +340,7 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
                     {
                       key: 'watermark-remove',
                       label: t('word.insert.watermarkRemove'),
+                      icon: menuIcon(<Ban size={ICON} />),
                       danger: true,
                       onSelect: handleWatermarkRemove,
                     },
