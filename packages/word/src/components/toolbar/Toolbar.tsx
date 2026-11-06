@@ -8,7 +8,6 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type Editor from '@hufe921/canvas-editor';
 import type { RowFlex } from '@hufe921/canvas-editor';
 import { ListType, ListStyle } from '@hufe921/canvas-editor';
-import { Sparkles } from 'lucide-react';
 import { useI18n } from '@eflink-tech/office-kit';
 import { computeOverflowBuckets, type OverflowBucket } from './toolbarOverflow';
 import { FontFamilySelect } from './FontFamilySelect';
@@ -22,7 +21,6 @@ import { ColorPicker } from './ColorPicker';
 import { WordIconButton, ToolbarDivider } from './ToolButton';
 import { useFormatPainter } from '../../hooks/useFormatPainter';
 import { useEditorStore } from '../../store/editorStore';
-import { useUIStore } from '../../store/uiStore';
 import {
   WordUndoIcon,
   WordRedoIcon,
@@ -131,7 +129,6 @@ function OverflowMoreButton({
 export function Toolbar({ editor }: ToolbarProps) {
   const { t } = useI18n();
   const { rangeStyle } = useEditorStore();
-  const aiPanelOpen = useUIStore((s) => s.aiPanelOpen);
 
   const {
     mode: painterMode,
@@ -555,21 +552,7 @@ export function Toolbar({ editor }: ToolbarProps) {
       },
       { key: 'highlight-block', collapsible: true, node: <Placeholder icon={WordHighlightBlockIcon} label={t('word.tb.highlightBlock')} /> },
     ],
-    // AI 助手（collapsible: false 保证窄屏下也不折叠进「更多」）
-    [
-      {
-        key: 'ai-assistant',
-        collapsible: false,
-        node: (
-          <WordIconButton
-            icon={Sparkles}
-            label={t('word.tb.aiAssistant')}
-            onClick={() => useUIStore.getState().toggleAIPanel()}
-            active={aiPanelOpen}
-          />
-        ),
-      },
-    ],
+    // AI 助手开关已上移到顶栏动作区（WordEditor 的 headerActions），工具栏不再重复放入口
   ];
 
   const { hiddenKeys, buckets } = computeOverflowBuckets(

@@ -361,6 +361,14 @@ const ROWS = {
   'word.ai.tpl.translate.prompt': ['请将以下文本翻译为英文，直接输出译文，不要解释：\n{text}', 'Translate the following text into English. Output only the translation, and do not explain:\n{text}', 'Traduce el siguiente texto al inglés. Muestra solo la traducción y no expliques:\n{text}', 'Traduza o texto a seguir para o inglês. Mostre apenas a tradução e não explique:\n{text}'],
   'word.ai.tpl.summarize.name': ['总结', 'Summarize', 'Resumir', 'Resumir'],
   'word.ai.tpl.summarize.prompt': ['请总结以下文本的要点，直接输出总结内容，不要解释：\n{text}', 'Summarize the key points of the following text. Output only the summary, and do not explain:\n{text}', 'Resume los puntos clave del siguiente texto. Muestra solo el resumen y no expliques:\n{text}', 'Resuma os pontos principais do texto a seguir. Mostre apenas o resumo e não explique:\n{text}'],
+  'word.ai.close': ['收起 AI 助手（Esc）', 'Collapse AI assistant (Esc)', 'Contraer el asistente de IA (Esc)', 'Recolher o assistente de IA (Esc)'],
+  'word.ai.reasoning': ['思考过程', 'Reasoning', 'Razonamiento', 'Raciocínio'],
+  'word.ai.thinking': ['思考中…', 'Thinking…', 'Pensando…', 'Pensando…'],
+  'word.ai.attach': ['添加图片', 'Attach image', 'Adjuntar imagen', 'Anexar imagem'],
+  'word.ai.removeImage': ['移除图片', 'Remove image', 'Quitar imagen', 'Remover imagem'],
+  'word.ai.imageAlt': ['图片 {index}', 'Image {index}', 'Imagen {index}', 'Imagem {index}'],
+  'word.ai.imageFailed': ['图片处理失败：{reason}', 'Image processing failed: {reason}', 'Error al procesar la imagen: {reason}', 'Falha ao processar a imagem: {reason}'],
+  'word.ai.visionHint': ['若为图片相关问题，请确认所选模型支持视觉输入。', 'If the question involves images, check that the selected model supports vision input.', 'Si la pregunta incluye imágenes, comprueba que el modelo seleccionado admita entrada visual.', 'Se a pergunta incluir imagens, verifique se o modelo selecionado aceita entrada visual.'],
 } as const satisfies Record<string, Row>;
 
 function build(): OfficeMessagesByLocale {

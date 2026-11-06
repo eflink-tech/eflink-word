@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { Share2, MessageCircle } from 'lucide-react';
+import { Share2, MessageCircle, Sparkles } from 'lucide-react';
 import { I18nProvider, useI18n, type OfficeLocale } from '@eflink-tech/office-kit';
 import { useDocumentStore } from '../store/documentStore';
 import { useEditorStore } from '../store/editorStore';
@@ -269,28 +269,49 @@ function WordEditorInner({
   const hasTopRow = Boolean(resolvedBranding) || showToolbar;
 
   const showShare = getWordShareHandler() !== null;
-  const headerActions = showShare ? (
+  // AI 助手开关固定在顶栏最右侧动作区（与 eflink-pptx 一致），无分享入口时也要保留
+  const headerActions = (
     <>
       <button
         type="button"
-        onClick={() => void openShare()}
-        title={t('shell.share')}
-        className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
+        onClick={() => useUIStore.getState().toggleAIPanel()}
+        title={t('word.tb.aiAssistant')}
+        aria-label={t('word.tb.aiAssistant')}
+        aria-pressed={aiPanelOpen}
+        data-testid="ai-toggle"
+        className={`flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors ${
+          aiPanelOpen
+            ? 'bg-[#e8effd] text-[#3370ff]'
+            : 'text-[#4c5158] hover:bg-black/[0.06] hover:text-[#1f2329]'
+        }`}
       >
-        <Share2 size={14} />
-        {t('shell.share')}
+        <Sparkles size={14} />
+        {t('word.tb.aiAssistant')}
       </button>
-      <button
-        type="button"
-        onClick={() => window.open('/contact', '_blank')}
-        title={t('shell.feedback')}
-        className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
-      >
-        <MessageCircle size={14} />
-        {t('shell.feedback')}
-      </button>
+      {showShare && (
+        <>
+          <button
+            type="button"
+            onClick={() => void openShare()}
+            title={t('shell.share')}
+            className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
+          >
+            <Share2 size={14} />
+            {t('shell.share')}
+          </button>
+          <button
+            type="button"
+            onClick={() => window.open('/contact', '_blank')}
+            title={t('shell.feedback')}
+            className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-[#4c5158] transition-colors hover:bg-black/[0.06] hover:text-[#1f2329]"
+          >
+            <MessageCircle size={14} />
+            {t('shell.feedback')}
+          </button>
+        </>
+      )}
     </>
-  ) : null;
+  );
 
   return (
     <div className="h-full min-w-[960px] flex flex-col bg-[#f5f6f7]">
@@ -367,8 +388,10 @@ function WordEditorInner({
         )}
         </div>
 
-        {/* AI 助手面板（右侧独立列，参考 eflink-draw / eflink-pptx） */}
-        {aiPanelOpen && <AIChatPanel />}
+        {/* AI 助手面板：常驻挂载保留会话状态，宽度过渡实现滑入滑出（与 eflink-pptx 同款停靠位） */}
+        <div className="efk-ai-slot" data-open={aiPanelOpen}>
+          <AIChatPanel />
+        </div>
       </div>
 
       {searchPanelOpen && (
