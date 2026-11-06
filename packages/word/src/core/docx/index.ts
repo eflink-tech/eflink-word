@@ -4,9 +4,12 @@
 import { saveAs } from 'file-saver';
 import type Editor from '@hufe921/canvas-editor';
 import { OfficeError, isOfficeError } from '@eflink-tech/office-kit';
-import type { IDocxImportZoneInfo } from './importDocx';
+import type { IDocxImportZoneInfo, ParsedDocx } from './importDocx';
 import { sanitizeExportBasename } from '../utils/exportImport';
 import { wordT } from '../../i18n/runtime';
+
+export type { DocxPageSetup, ParsedDocx } from './importDocx';
+export { renderDocxPreviewImages } from './preview';
 
 /** OLE2（CFB 复合文档）魔数，即旧版 .doc / .xls / .ppt 的文件头 */
 const OLE_SIGNATURE: readonly number[] = [
@@ -32,23 +35,18 @@ function assertNotLegacyDoc(file: File, buffer: ArrayBuffer): void {
 const MAX_IMPORT_SIZE = 100 * 1024 * 1024;
 
 /**
- * 导入 docx：解析并覆盖当前文档内容
- * @returns 页眉/页脚/页码导入状态（调用方据此同步自身的显示配置）
+ * 解析 docx：只产出解析结果，不修改编辑器（预览与正式导入共用，避免重复解析）
  * @throws 旧版 .doc 格式、非标准 docx 结构时抛出 OfficeError（code 为 i18n key）
  */
-export async function importDocx(
-  editor: Editor,
-  file: File
-): Promise<IDocxImportZoneInfo | undefined> {
+export async function parseDocx(file: File): Promise<ParsedDocx> {
   if (file.size > MAX_IMPORT_SIZE) {
     throw new OfficeError('word.error.docxTooLarge', 'docx exceeds 100MB')
   }
   const arrayBuffer = await file.arrayBuffer();
   assertNotLegacyDoc(file, arrayBuffer);
-  const { createDocxImporter } = await import('./importDocx');
+  const { parseDocxBuffer } = await import('./importDocx');
   try {
-    // 必须 await：否则解析失败变成 unhandled rejection，UI 层 catch 接不到，用户看到静默失败
-    return await createDocxImporter(editor.command)({ arrayBuffer });
+    return await parseDocxBuffer(arrayBuffer);
   } catch (error) {
     // 收编代码已抛可本地化错误时原样透传；其余（JSZip 非法 zip 等）兜底为通用提示
     if (isOfficeError(error)) {
@@ -56,6 +54,26 @@ export async function importDocx(
     }
     throw new OfficeError('word.error.docxCorrupted', 'invalid docx archive');
   }
+}
+
+/** 把解析结果覆盖到编辑器（含纸张/页眉页脚/页码/水印配置） */
+export async function applyParsedDocx(
+  editor: Editor,
+  parsed: ParsedDocx
+): Promise<IDocxImportZoneInfo | undefined> {
+  const { applyDocxData } = await import('./importDocx');
+  return applyDocxData(editor.command, parsed);
+}
+
+/**
+ * 导入 docx：解析并覆盖当前文档内容
+ * @returns 页眉/页脚/页码导入状态（调用方据此同步自身的显示配置）
+ */
+export async function importDocx(
+  editor: Editor,
+  file: File
+): Promise<IDocxImportZoneInfo | undefined> {
+  return applyParsedDocx(editor, await parseDocx(file));
 }
 
 /** 导出 docx 并触发浏览器下载 */

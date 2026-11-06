@@ -10,8 +10,7 @@ const ROWS = {
   // ── 主菜单 ─────────────────────────────────────────────
   'word.menu.newDoc': ['新建文档', 'New document', 'Nuevo documento', 'Novo documento'],
   'word.menu.renameDoc': ['修改文档名称', 'Rename document', 'Cambiar nombre', 'Renomear documento'],
-  'word.menu.importDocx': ['导入 Word (.docx)', 'Import Word (.docx)', 'Importar Word (.docx)', 'Importar Word (.docx)'],
-  'word.menu.importData': ['导入数据 (.efw.json)', 'Import data (.efw.json)', 'Importar datos (.efw.json)', 'Importar dados (.efw.json)'],
+  'word.menu.import': ['导入', 'Import', 'Importar', 'Importar'],
   'word.menu.exportDocx': ['导出 Word (.docx)', 'Export Word (.docx)', 'Exportar Word (.docx)', 'Exportar Word (.docx)'],
   'word.menu.exportData': ['导出数据 (.efw.json)', 'Export data (.efw.json)', 'Exportar datos (.efw.json)', 'Exportar dados (.efw.json)'],
   'word.menu.edit.find': ['查找与替换', 'Find and replace', 'Buscar y reemplazar', 'Localizar e substituir'],
@@ -164,6 +163,20 @@ const ROWS = {
   'word.insert.imageOnly': ['请选择图片文件', 'Please choose an image file', 'Selecciona un archivo de imagen', 'Escolha um arquivo de imagem'],
   'word.insert.imageTooLarge': ['图片不能超过 5MB', 'Image must be under 5 MB', 'La imagen no puede superar 5 MB', 'A imagem deve ter no máximo 5 MB'],
 
+  // ── 导入弹窗 ───────────────────────────────────────────
+  'word.import.title': ['导入', 'Import', 'Importar', 'Importar'],
+  'word.import.previewTitle': ['导入预览', 'Import preview', 'Vista previa de importación', 'Pré-visualização da importação'],
+  'word.import.choose': ['点击选择文件', 'Click to choose a file', 'Haz clic para elegir un archivo', 'Clique para escolher um arquivo'],
+  'word.import.support': ['支持 .docx（Word 文档）与 .json（本工具工程文件）', 'Supports .docx (Word) and .json (project files from this tool)', 'Admite .docx (Word) y .json (archivos de proyecto de esta herramienta)', 'Compatível com .docx (Word) e .json (arquivos de projeto desta ferramenta)'],
+  'word.import.previewNote': ['DOCX 将先展示高保真预览，确认后再导入为可编辑内容', 'DOCX files are previewed in high fidelity first and imported as editable content after you confirm', 'Los archivos DOCX se previsualizan con alta fidelidad y se importan como contenido editable tras confirmar', 'Arquivos DOCX são pré-visualizados em alta fidelidade e importados como conteúdo editável após a confirmação'],
+  'word.import.limitNote': ['导入尽力还原文本、表格、图片与页眉页脚；复杂排版可能有差异', 'Import restores text, tables, images and headers/footers as faithfully as possible; complex layouts may differ', 'La importación restaura texto, tablas, imágenes y encabezados/pies con la mayor fidelidad posible; los diseños complejos pueden variar', 'A importação restaura texto, tabelas, imagens e cabeçalhos/rodapés com a maior fidelidade possível; layouts complexos podem variar'],
+  'word.import.previewing': ['正在生成预览…', 'Generating preview…', 'Generando vista previa…', 'Gerando pré-visualização…'],
+  'word.import.importing': ['正在导入…', 'Importing…', 'Importando…', 'Importando…'],
+  'word.import.back': ['返回', 'Back', 'Atrás', 'Voltar'],
+  'word.import.confirm': ['确认导入（可编辑）', 'Import as editable', 'Importar como editable', 'Importar como editável'],
+  'word.import.chooseFile': ['请选择 .docx 或 .json 文件', 'Choose a .docx or .json file', 'Elige un archivo .docx o .json', 'Escolha um arquivo .docx ou .json'],
+  'word.import.pageCount': ['共 {count} 页', '{count} pages', '{count} páginas', '{count} páginas'],
+
   // ── 通用弹窗 ───────────────────────────────────────────
   'word.rename.title': ['修改文档名称', 'Rename document', 'Cambiar nombre', 'Renomear documento'],
   'word.rename.placeholder': ['请输入文档名称', 'Enter document name', 'Introduce el nombre del documento', 'Digite o nome do documento'],
@@ -192,7 +205,6 @@ const ROWS = {
   'word.loading.exportPdf': ['正在导出 PDF，请稍候…', 'Exporting PDF, please wait…', 'Exportando PDF, espera…', 'Exportando PDF, aguarde…'],
   'word.loading.exportImage': ['正在导出图片，请稍候…', 'Exporting image, please wait…', 'Exportando imagen, espera…', 'Exportando imagem, aguarde…'],
   'word.loading.exportDocx': ['正在导出 Word，请稍候…', 'Exporting Word, please wait…', 'Exportando Word, espera…', 'Exportando Word, aguarde…'],
-  'word.loading.importDocx': ['正在导入 Word，请稍候…', 'Importing Word, please wait…', 'Importando Word, espera…', 'Importando Word, aguarde…'],
   'word.shortcuts.title': ['快捷键', 'Keyboard shortcuts', 'Atajos de teclado', 'Atalhos de teclado'],
   'word.shortcuts.categoryFile': ['文件', 'File', 'Archivo', 'Arquivo'],
   'word.shortcuts.categoryEdit': ['编辑', 'Edit', 'Editar', 'Editar'],

@@ -1,5 +1,5 @@
 // Word 主菜单：横向菜单栏（对齐统一后的 office-kit 顶栏），保留原汉堡菜单的全部动作与弹窗。
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
   AlignJustify,
@@ -12,7 +12,6 @@ import {
   FileOutput,
   FilePlus2,
   FileText,
-  FileUp,
   ImageDown,
   ImagePlus,
   Keyboard,
@@ -52,11 +51,12 @@ import { useImageInsert, useLinkDialog } from '../toolbar/useInsertActions';
 import { WatermarkModal } from '../toolbar/WatermarkModal';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { ErrorDialog } from '../common/ErrorDialog';
+import { ImportDialog } from '../common/ImportDialog';
 import { LoadingDialog } from '../common/LoadingDialog';
 import { RenameDialog } from '../common/RenameDialog';
 import { ShortcutsDialog } from '../common/ShortcutsDialog';
 import { formatDateInsert, type DateInsertFormat } from '../../core/utils/dateInsert';
-import { exportEfword, exportImage, exportPdf, importEfword } from '../../core/utils/exportImport';
+import { exportEfword, exportImage, exportPdf } from '../../core/utils/exportImport';
 
 const ICON = 16;
 
@@ -97,10 +97,8 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
   const [pdfExporting, setPdfExporting] = useState(false);
   const [imageExporting, setImageExporting] = useState(false);
   const [docxExporting, setDocxExporting] = useState(false);
-  const [docxImporting, setDocxImporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const importInputRef = useRef<HTMLInputElement>(null);
-  const docxImportInputRef = useRef<HTMLInputElement>(null);
 
   const { open: openImagePicker, input: imageInput } = useImageInsert(editor);
   const linkDialog = useLinkDialog(editor);
@@ -181,59 +179,6 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
     }
   };
 
-  const triggerDocxImport = () => {
-    if (docxImportInputRef.current) {
-      docxImportInputRef.current.value = '';
-      docxImportInputRef.current.click();
-    }
-  };
-
-  const handleDocxImportChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !editor) return;
-    flushSync(() => setDocxImporting(true));
-    try {
-      const { importDocx } = await import('../../core/docx');
-      const zone = await importDocx(editor, file);
-      // 页眉/页脚/页码跟随导入的文档：编辑器选项在 contentChange 后会被应用
-      // 配置重放（Editor.tsx refreshPageNumber），须同步进 uiStore 才能稳定生效；
-      // content 置空 = 显示文档自带的页眉/页脚，而非设置面板里的自定义文本
-      const { setHeaderConfig, setFooterConfig, setPageNumberConfig } = useUIStore.getState();
-      setHeaderConfig({ enabled: !!zone?.hasHeader, content: '' });
-      setFooterConfig({ enabled: !!zone?.hasFooter, content: '' });
-      setPageNumberConfig(
-        zone?.pageNumber
-          ? { enabled: true, ...zone.pageNumber }
-          : { enabled: false },
-      );
-    } catch (err) {
-      setErrorMessage(resolveErrorMessage(err, t, 'word.error.importDocx'));
-    } finally {
-      setDocxImporting(false);
-      if (docxImportInputRef.current) docxImportInputRef.current.value = '';
-    }
-  };
-
-  const triggerImport = () => {
-    if (importInputRef.current) {
-      importInputRef.current.value = '';
-      importInputRef.current.click();
-    }
-  };
-
-  const handleImportChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !editor) return;
-    try {
-      await importEfword(editor, file);
-    } catch (err) {
-      console.error('导入失败:', err);
-      setErrorMessage(resolveErrorMessage(err, t, 'word.error.efwImport'));
-    } finally {
-      if (importInputRef.current) importInputRef.current.value = '';
-    }
-  };
-
   const insertDate = (format: DateInsertFormat) => {
     if (!editor) return;
     editor.command.executeInsertElementList([{ value: formatDateInsert(new Date(), format) }]);
@@ -287,16 +232,10 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
       ],
       [
         {
-          key: 'import-docx',
-          label: t('word.menu.importDocx'),
+          key: 'import',
+          label: t('word.menu.import'),
           icon: menuIcon(<FileInput size={ICON} />),
-          onSelect: triggerDocxImport,
-        },
-        {
-          key: 'import-efword',
-          label: t('word.menu.importData'),
-          icon: menuIcon(<FileUp size={ICON} />),
-          onSelect: triggerImport,
+          onSelect: () => setImportOpen(true),
         },
       ],
       [
@@ -618,20 +557,9 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
 
       {imageInput}
       {linkDialog.dialog}
-      <input
-        ref={importInputRef}
-        type="file"
-        accept=".efw.json,.efword,application/json,.json"
-        className="hidden"
-        onChange={handleImportChange}
-      />
-      <input
-        ref={docxImportInputRef}
-        type="file"
-        accept=".docx"
-        className="hidden"
-        onChange={handleDocxImportChange}
-      />
+      {importOpen && editor && (
+        <ImportDialog editor={editor} onClose={() => setImportOpen(false)} />
+      )}
       {watermarkOpen && (
         <WatermarkModal
           initialValue={watermark}
@@ -659,7 +587,6 @@ export function WordMenuBar({ editor, brand = false, showMenus = true, actions }
       {pdfExporting && <LoadingDialog message={t('word.loading.exportPdf')} />}
       {imageExporting && <LoadingDialog message={t('word.loading.exportImage')} />}
       {docxExporting && <LoadingDialog message={t('word.loading.exportDocx')} />}
-      {docxImporting && <LoadingDialog message={t('word.loading.importDocx')} />}
       {errorMessage && (
         <ErrorDialog title={t('word.error.title')} message={errorMessage} onClose={() => setErrorMessage(null)} />
       )}

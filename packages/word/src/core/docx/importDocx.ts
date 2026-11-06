@@ -3721,91 +3721,142 @@ class DocxParser {
 // 导入入口
 // =====================================================================
 
+export interface DocxPageSetup {
+  width?: number
+  height?: number
+  paperDirection?: 'vertical' | 'horizontal'
+  margins?: [number, number, number, number]
+  defaultFont?: string
+  defaultSize?: number
+}
+
+/** 解析结果：预览与正式导入共用，避免同一文件重复解析 */
+export interface ParsedDocx {
+  data: IEditorData
+  watermark?: object
+  pageSetup?: DocxPageSetup
+  disabledPages?: { header?: number[]; footer?: number[] }
+  pageNumber?: IDocxImportPageNumber
+  zoneOffsets?: { headerTop?: number; footerBottom?: number }
+}
+
+export async function parseDocxBuffer(
+  arrayBuffer: ArrayBuffer
+): Promise<ParsedDocx> {
+  const zip = await JSZip.loadAsync(arrayBuffer)
+  const parser = new DocxParser(zip)
+  const {
+    watermark,
+    pageSetup,
+    disabledPages,
+    pageNumber,
+    zoneOffsets,
+    ...data
+  } = await parser.parse()
+  splitTrailingBreaks(data.main || [])
+  splitTrailingBreaks(data.header || [])
+  splitTrailingBreaks(data.footer || [])
+  return {
+    data,
+    ...(watermark ? { watermark } : {}),
+    ...(pageSetup ? { pageSetup: pageSetup as DocxPageSetup } : {}),
+    ...(disabledPages ? { disabledPages } : {}),
+    ...(pageNumber ? { pageNumber } : {}),
+    ...(zoneOffsets ? { zoneOffsets } : {})
+  }
+}
+
+export function applyDocxData(
+  command: Command,
+  parsed: ParsedDocx,
+  options: { isAppend?: boolean } = {}
+): IDocxImportZoneInfo | undefined {
+  const {
+    data,
+    watermark,
+    pageSetup,
+    disabledPages,
+    pageNumber,
+    zoneOffsets
+  } = parsed
+  const { isAppend } = options
+  // 追加模式：仅插入正文到文档末尾，不覆盖已有内容
+  if (isAppend) {
+    const commandAny = command as unknown as {
+      executeInsertElementList?: (payload: IElement[]) => void
+    }
+    commandAny.executeInsertElementList?.(data.main || [])
+    return undefined
+  }
+  // 纸张/边距/方向/默认字体/水印 -> 编辑器配置
+  // 注意：updateOptions 会将未传字段重置为默认值，需带上当前配置
+  // 导入为整体替换语义：docx 无水印时显式清除编辑器已有水印
+  const currentOptions = (command.getValue().options || {}) as Record<
+    string,
+    any
+  >
+  const hasCurrentWatermark = !!currentOptions.watermark?.data
+  if (
+    watermark ||
+    pageSetup ||
+    disabledPages ||
+    pageNumber ||
+    zoneOffsets ||
+    hasCurrentWatermark
+  ) {
+    const commandAny = command as unknown as {
+      executeUpdateOptions?: (payload: object) => void
+      getValue: () => { options: object }
+    }
+    if (commandAny.executeUpdateOptions) {
+      const update: Record<string, any> = {
+        ...currentOptions,
+        watermark: watermark || { data: '' },
+        ...(pageSetup ?? {})
+      }
+      // 页脚页码域：docx 无页码时禁用编辑器已有页码
+      update.pageNumber = pageNumber
+        ? { ...currentOptions.pageNumber, ...pageNumber, disabled: false }
+        : { ...currentOptions.pageNumber, disabled: true }
+      // 页眉/页脚距边距离（sectPr header/footer 引用）
+      if (zoneOffsets?.headerTop !== undefined || disabledPages?.header) {
+        update.header = {
+          ...currentOptions.header,
+          ...(zoneOffsets?.headerTop !== undefined
+            ? { top: zoneOffsets.headerTop }
+            : {}),
+          ...(disabledPages?.header
+            ? { disabledPages: disabledPages.header }
+            : {})
+        }
+      }
+      if (zoneOffsets?.footerBottom !== undefined || disabledPages?.footer) {
+        update.footer = {
+          ...currentOptions.footer,
+          ...(zoneOffsets?.footerBottom !== undefined
+            ? { bottom: zoneOffsets.footerBottom }
+            : {}),
+          ...(disabledPages?.footer
+            ? { disabledPages: disabledPages.footer }
+            : {})
+        }
+      }
+      commandAny.executeUpdateOptions(update)
+    }
+  }
+  command.executeSetValue(data)
+  return {
+    hasHeader: (data.header || []).length > 0,
+    hasFooter: (data.footer || []).length > 0,
+    ...(pageNumber ? { pageNumber } : {})
+  }
+}
+
 export function createDocxImporter(command: Command) {
-  return async function (options: IImportDocxOption): Promise<IDocxImportZoneInfo | undefined> {
-    const { arrayBuffer, isAppend } = options
-    const zip = await JSZip.loadAsync(arrayBuffer)
-    const parser = new DocxParser(zip)
-    const {
-      watermark,
-      pageSetup,
-      disabledPages,
-      pageNumber,
-      zoneOffsets,
-      ...data
-    } = await parser.parse()
-    splitTrailingBreaks(data.main || [])
-    splitTrailingBreaks(data.header || [])
-    splitTrailingBreaks(data.footer || [])
-    // 追加模式：仅插入正文到文档末尾，不覆盖已有内容
-    if (isAppend) {
-      const commandAny = command as unknown as {
-        executeInsertElementList?: (payload: IElement[]) => void
-      }
-      commandAny.executeInsertElementList?.(data.main || [])
-      return undefined
-    }
-    // 纸张/边距/方向/默认字体/水印 -> 编辑器配置
-    // 注意：updateOptions 会将未传字段重置为默认值，需带上当前配置
-    // 导入为整体替换语义：docx 无水印时显式清除编辑器已有水印
-    const currentOptions = (command.getValue().options || {}) as Record<
-      string,
-      any
-    >
-    const hasCurrentWatermark = !!currentOptions.watermark?.data
-    if (
-      watermark ||
-      pageSetup ||
-      disabledPages ||
-      pageNumber ||
-      zoneOffsets ||
-      hasCurrentWatermark
-    ) {
-      const commandAny = command as unknown as {
-        executeUpdateOptions?: (payload: object) => void
-        getValue: () => { options: object }
-      }
-      if (commandAny.executeUpdateOptions) {
-        const update: Record<string, any> = {
-          ...currentOptions,
-          watermark: watermark || { data: '' },
-          ...pageSetup
-        }
-        // 页脚页码域：docx 无页码时禁用编辑器已有页码
-        update.pageNumber = pageNumber
-          ? { ...currentOptions.pageNumber, ...pageNumber, disabled: false }
-          : { ...currentOptions.pageNumber, disabled: true }
-        // 页眉/页脚距边距离（sectPr header/footer 引用）
-        if (zoneOffsets?.headerTop !== undefined || disabledPages?.header) {
-          update.header = {
-            ...currentOptions.header,
-            ...(zoneOffsets?.headerTop !== undefined
-              ? { top: zoneOffsets.headerTop }
-              : {}),
-            ...(disabledPages?.header
-              ? { disabledPages: disabledPages.header }
-              : {})
-          }
-        }
-        if (zoneOffsets?.footerBottom !== undefined || disabledPages?.footer) {
-          update.footer = {
-            ...currentOptions.footer,
-            ...(zoneOffsets?.footerBottom !== undefined
-              ? { bottom: zoneOffsets.footerBottom }
-              : {}),
-            ...(disabledPages?.footer
-              ? { disabledPages: disabledPages.footer }
-              : {})
-          }
-        }
-        commandAny.executeUpdateOptions(update)
-      }
-    }
-    command.executeSetValue(data)
-    return {
-      hasHeader: (data.header || []).length > 0,
-      hasFooter: (data.footer || []).length > 0,
-      ...(pageNumber ? { pageNumber } : {})
-    }
+  return async function (
+    options: IImportDocxOption
+  ): Promise<IDocxImportZoneInfo | undefined> {
+    const parsed = await parseDocxBuffer(options.arrayBuffer)
+    return applyDocxData(command, parsed, { isAppend: options.isAppend })
   }
 }

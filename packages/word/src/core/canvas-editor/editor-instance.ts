@@ -12,6 +12,8 @@ export interface CreateEditorOptions {
   defaultSize: number;
   watermark?: string;
   placeholder?: string;
+  /** 页码配置；预览等场景可显式 disabled，避免渲染文档里没有的页码 */
+  pageNumber?: IEditorOption['pageNumber'];
   /** CSS 选择器，指向实际滚动容器（canvas-editor 用它监听滚动和 IntersectionObserver 视口） */
   scrollContainerSelector?: string;
 }
@@ -51,6 +53,7 @@ export function createEditor(opts: CreateEditorOptions): Editor {
     // 会显著拉高页面；降到 24px（paging 布局会按内容撑高，不会截断）
     table: { defaultTrMinHeight: DEFAULT_TABLE_ROW_MIN_HEIGHT },
     ...(opts.watermark ? { watermark: { data: opts.watermark } } : {}),
+    ...(opts.pageNumber ? { pageNumber: opts.pageNumber } : {}),
     ...(opts.scrollContainerSelector ? { scrollContainerSelector: opts.scrollContainerSelector } : {}),
   };
 
