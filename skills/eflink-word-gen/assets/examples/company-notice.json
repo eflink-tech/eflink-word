@@ -1,0 +1,50 @@
+{
+  "title": "关于 2026 年度安全生产培训的通知",
+  "page": { "paperSize": "A4", "direction": "vertical", "margin": [96, 110, 96, 110], "defaultFont": "Microsoft YaHei", "defaultSize": 16 },
+  "header": [
+    { "type": "paragraph", "text": "华信科技有限公司 · 行政文件", "align": "right", "size": 12, "runs": [{ "text": "华信科技有限公司 · 行政文件", "color": "#6B7280" }] }
+  ],
+  "footer": [
+    { "type": "paragraph", "text": "第 1 页 / 内部资料", "align": "center", "runs": [{ "text": "内部资料 · 请勿外传", "color": "#9CA3AF", "size": 12 }] }
+  ],
+  "content": [
+    { "type": "paragraph", "text": "华信行政〔2026〕18 号", "align": "center", "runs": [{ "text": "华信行政〔2026〕18 号", "color": "#595959" }] },
+    { "type": "heading", "level": 1, "size": 28, "text": "关于开展 2026 年度安全生产培训的通知", "align": "center", "runs": [{ "text": "关于开展 2026 年度安全生产培训的通知", "color": "#C00000" }] },
+    { "type": "paragraph", "text": "各部门、各分支机构：", "indent": 0 },
+    { "type": "paragraph", "text": "为落实年度安全生产责任，提升全员应急处置能力，经公司研究决定开展安全生产专项培训。现将有关事项通知如下：", "indent": 2, "runs": [{ "text": "为落实年度安全生产责任，提升全员应急处置能力，经公司研究决定开展安全生产专项培训。现将有关事项通知如下：", "bold": false }] },
+    { "type": "heading", "level": 2, "text": "一、培训安排" },
+    { "type": "table", "borderType": "all", "colWidths": [90, 170, 90, 220], "rows": [
+      { "height": 28, "repeatHeader": true, "cells": [
+        { "text": "场次", "bold": true, "color": "#FFFFFF", "backgroundColor": "#2F5597", "align": "center" },
+        { "text": "时间", "bold": true, "color": "#FFFFFF", "backgroundColor": "#2F5597", "align": "center" },
+        { "text": "形式", "bold": true, "color": "#FFFFFF", "backgroundColor": "#2F5597", "align": "center" },
+        { "text": "参会人员", "bold": true, "color": "#FFFFFF", "backgroundColor": "#2F5597", "align": "center" }
+      ] },
+      { "height": 26, "cells": [
+        { "text": "第一场", "align": "center" },
+        { "text": "11 月 20 日 14:00-16:00" },
+        { "text": "线下", "align": "center" },
+        { "text": "总部全体员工" }
+      ] },
+      { "height": 26, "cells": [
+        { "text": "第二场", "align": "center" },
+        { "text": "11 月 27 日 14:00-16:00" },
+        { "text": "线上直播", "align": "center" },
+        { "text": "分支机构、驻外人员" }
+      ] }
+    ] },
+    { "type": "heading", "level": 2, "text": "二、培训要求" },
+    { "type": "list", "ordered": true, "items": [
+      "参训人员须提前 10 分钟签到，不得无故缺席；",
+      "培训结束后统一进行线上答题考核，80 分及以上为合格；",
+      { "text": "缺席或考核不合格者，由所在部门安排补训。", "bold": true }
+    ] },
+    { "type": "paragraph", "text": "" },
+    { "type": "heading", "level": 3, "text": "三、确认回执" },
+    { "type": "checkbox", "checked": true, "text": "本人已阅读通知，将按时参加第一场培训" },
+    { "type": "checkbox", "checked": false, "text": "本人申请参加第二场线上培训" },
+    { "type": "paragraph", "text": "" },
+    { "type": "paragraph", "align": "right", "runs": [{ "text": "华信科技有限公司行政部", "bold": true }] },
+    { "type": "paragraph", "align": "right", "text": "2026 年 11 月 14 日" }
+  ]
+}
